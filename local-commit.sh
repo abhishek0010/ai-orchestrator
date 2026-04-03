@@ -22,12 +22,25 @@ fi
 TMP_DIFF=$(mktemp)
 echo "$DIFF" > "$TMP_DIFF"
 
-echo "🤖 Ollama (qwen2.5-coder:1.5b) is analyzing the code and writing a commit message..."
-
-PROMPT="Generate a concise Conventional Commit message based on this git diff. Output ONLY the commit message itself on a single line, nothing else. No markdown formatting."
-
+echo "🤖 Ollama (qwen2.5-coder:7b) is analyzing the code and writing a commit message..."
+PROMPT=$(cat << 'EOF'
+Generate a Conventional Commit message based on this git diff.
+Rules:
+- Format: "type(scope): description"
+- Subject line: max 72 chars, imperative mood
+- Conventional commits prefix: feat:, fix:, docs:, chore:, refactor:, test:
+- Optional body after blank line if changes are complex
+- No emoji, English only
+- Return ONLY the commit message, nothing else. No markdown formatting.
+EOF
+)
 # Call the helper script to query local Ollama
-MESSAGE=$("$OLLAMA_SCRIPT" --model qwen2.5-coder:1.5b --prompt "$PROMPT" --context-file "$TMP_DIFF")
+MESSAGE=$("$OLLAMA_SCRIPT" --model qwen2.5-coder:7b --prompt "$PROMPT" --context-file "$TMP_DIFF")
+
+# Clean up Markdown backticks that small models often ignore instructions to omit
+MESSAGE=$(echo "$MESSAGE" | sed '/^```/d')
+
+
 
 rm -f "$TMP_DIFF"
 
@@ -37,7 +50,7 @@ if [ -z "$MESSAGE" ] || [[ "$MESSAGE" == *"Error"* ]]; then
     exit 1
 fi
 
-echo -e "\n📝 Proposed commit message:"
+echo -e "\nProposed commit message:"
 echo -e "\033[1;32m$MESSAGE\033[0m\n"
 
 # Prompt the user for confirmation
