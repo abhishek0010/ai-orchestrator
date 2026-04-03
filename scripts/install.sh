@@ -13,6 +13,7 @@ SYMLINK_TARGETS=(
   "skills"
   "scripts/call_ollama.sh"
   "scripts/local-commit.sh"
+  "scripts/open-pr.sh"
 )
 
 echo "Installing ai-orchestrator from: $REPO_DIR"
@@ -61,11 +62,17 @@ if grep -q "alias commit=" "$SHELL_RC" 2>/dev/null; then
   echo "  ✓ alias commit already exists in $SHELL_RC"
 else
   echo "" >> "$SHELL_RC"
-  echo "# ai-orchestrator: commit agent" >> "$SHELL_RC"
+  echo "# ai-orchestrator aliases" >> "$SHELL_RC"
   echo "$ALIAS_LINE" >> "$SHELL_RC"
-  echo "  ✓ alias commit → added to $SHELL_RC"
-  echo "    Run: source $SHELL_RC"
+  echo "  ✓ alias commit added"
 fi
+
+for alias_cmd in "local-commit" "open-pr"; do
+  if ! grep -q "alias $alias_cmd=" "$SHELL_RC" 2>/dev/null; then
+    echo "alias $alias_cmd='~/.claude/$alias_cmd.sh'" >> "$SHELL_RC"
+    echo "  ✓ alias $alias_cmd added to $SHELL_RC"
+  fi
+done
 
 # Make helper scripts executable
 if [[ -f "$REPO_DIR/scripts/call_ollama.sh" ]]; then
@@ -76,6 +83,11 @@ fi
 if [[ -f "$REPO_DIR/scripts/local-commit.sh" ]]; then
   chmod +x "$REPO_DIR/scripts/local-commit.sh"
   echo "  ✓ local-commit.sh is executable"
+fi
+
+if [[ -f "$REPO_DIR/scripts/open-pr.sh" ]]; then
+  chmod +x "$REPO_DIR/scripts/open-pr.sh"
+  echo "  ✓ open-pr.sh is executable"
 fi
 
 echo ""

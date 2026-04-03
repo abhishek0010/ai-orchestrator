@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# Find the script's directory to locate call_ollama.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OLLAMA_SCRIPT="$SCRIPT_DIR/call_ollama.sh"
+
+echo "Gathering git context for Pull Request..."
+
+# Find default target branch (usually main or master)
+TARGET_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+if [ -z "$TARGET_BRANCH" ]; then
+    TARGET_BRANCH="main"
+fi
+
+echo "Target branch identified as: $TARGET_BRANCH"
+
+# Get commits (log) and diff
+COMMITS=$(git log origin/$TARGET_BRANCH..HEAD --no-merges --pretty=format:"* %s" 2>/dev/null || git log $TARGET_BRANCH..HEAD --no-merges --pretty=format:"* %s" 2>/dev/null)
+DIFF=$(git diff origin/$TARGET_BRANCH...HEAD 2>/dev/null || git diff $TARGET_BRANCH...HEAD 2>/dev/null)
+
+if [ -z "$COMMITS" ] && [ -z "$DIFF" ]; then
+    echo "❌ No differences found between current branch and $TARGET_BRANCH."
+    exit 0
+fi
+
+# Save context to temporary file
+TMP_CONTEXT=$(mktemp)
+echo "COMMITS:" > "$TMP_CONTEXT"
+echo "$COMMITS" >> "$TMP_CONTEXT"
+echo -e "\n\nCODE DIFF:" >> "$TMP_CONTEXT"
+echo "$DIFF" >> "$TMP_CONTEXT"
+
+echo "Ollama (qwen2.5-coder:7b) is drafting your PR description..."
+
+PROMPT=$(cat << 'EOF'
+Act as a Senior Open Source Maintainer. Write a professional Pull Request Title and Description based on the provided Git Commits and Git Diff. 
+
+Follow this structure EXACTLY:
+TITLE: <Clear, concise title>
+BODY:
+<A markdown-formatted body including:>
+- **Summary**: 2-3 sentences explaining the overarching goal and business value.
+- **Key Changes**: A bulleted list of the technical changes made.
+- **Impact**: Any potential side-effects, areas to review carefully, or notes for the reviewer.
+EOF
+)
+
+MESSAGE=$("$OLLAMA_SCRIPT" --model qwen2.5-coder:7b --prompt "$PROMPT" --context-file "$TMP_CONTEXT")
+rm -f "$TMP_CONTEXT"
+
+if [ -z "$MESSAGE" ] || [[ "$MESSAGE" == *"Error"* ]]; then
+    echo "❌ Failed to call Ollama. Error output:"
+    echo "$MESSAGE"
+    exit 1
+fi
+
+# Clean up Markdown backticks that small models often ignore instructions to omit
+MESSAGE=$(echo "$MESSAGE" | sed '/^```/d')
+
+# Parse Title and Body
+TITLE=$(echo "$MESSAGE" | grep "^TITLE:" | sed 's/^TITLE:[[:space:]]*//' | head -n 1)
+BODY=$(echo "$MESSAGE" | awk '/^BODY:/{flag=1; next} flag')
+
+if [ -z "$TITLE" ]; then
+    # Fallback if the model didn't strictly format "TITLE:"
+    TITLE="Update from branch $(git branch --show-current)"
+    BODY="$MESSAGE"
+fi
+
+echo -e "\n================= PR PREVIEW ================="
+echo -e "\033[1;34mTITLE:\033[0m $TITLE"
+echo -e "\033[1;34mBODY:\033[0m\n$BODY"
+echo -e "==============================================\n"
+
+# Check for Github CLI and Github remote
+if command -v gh &> /dev/null && git remote -v 2>/dev/null | grep -q "github.com"; then
+    read -p "GitHub and 'gh' CLI detected! Create this PR automatically? (y/N) " confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo "Creating PR..."
+        gh pr create --title "$TITLE" --body "$BODY"
+        echo "✅ PR Created Successfully!"
+    else
+        echo "🚫 PR creation cancelled. You can copy the text above."
+    fi
+else
+    echo "You can copy the text above and paste it into your Git platform (GitHub, Bitbucket, GitLab, etc)."
+fi

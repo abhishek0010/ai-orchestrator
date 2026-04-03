@@ -33,6 +33,7 @@ ai-orchestrator/
 ├── scripts/
 │   ├── call_ollama.sh     # Bash script to query local Ollama models on demand
 │   ├── local-commit.sh    # Fast local LLM-driven git commits
+│   ├── open-pr.sh         # Local LLM-driven Pull Request descriptions
 │   └── install.sh         # Installer — creates symlinks in ~/.claude/ and configures projects
 ```
 
@@ -84,8 +85,8 @@ The script creates symlinks from `~/.claude/` into this repo, so a `git pull` is
 
 1. Creates `~/.claude/` if it doesn't exist
 2. Backs up any existing files to `~/.claude/backups/`
-3. Creates symlinks: `~/.claude/CLAUDE.md`, `~/.claude/IDE_AGENT_RULES.md`, `agents/`, `commands/`, `skills/`, `call_ollama.sh`, and `local-commit.sh`.
-4. Adds `commit` and `local-commit` shell aliases to `~/.zshrc` (or `~/.bashrc`)
+3. Creates symlinks: `~/.claude/CLAUDE.md`, `~/.claude/IDE_AGENT_RULES.md`, `agents/`, `commands/`, `skills/`, `call_ollama.sh`, `local-commit.sh`, and `open-pr.sh`.
+4. Adds `commit`, `local-commit`, and `open-pr` shell aliases to `~/.zshrc` (or `~/.bashrc`)
 5. Optionally pulls required Ollama models
 6. Optionally initializes or updates `ai_rules.md` in your current project with IDE Agent orchestration rules.
 
@@ -94,8 +95,8 @@ The script creates symlinks from `~/.claude/` into this repo, so a `git pull` is
 `install.sh` injects handy git aliases into your `~/.zshrc` to save API token overhead:
 
 ```bash
-commit         # runs Claude CLI commit agent explicitly
 local-commit   # stages all changes and generates commit message via local Ollama in <1 second
+open-pr        # generates a structured PR description from git intent and diffs (auto-creates if gh is installed)
 ```
 
 After install, run `source ~/.zshrc` to activate them in the current terminal.
