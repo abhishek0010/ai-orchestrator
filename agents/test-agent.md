@@ -34,39 +34,25 @@ Before writing any tests:
 ## Step 4 — Generate tests via Ollama
 
 ```bash
-python3 - <<'PYEOF'
-import ollama
-
-context = open(".claude/context/task_context.md").read()
-implemented_code = open("<changed_file_path>").read()
-existing_test_example = open("<existing_test_file>").read()  # or "" if none
-
-result = ollama.generate(
-    model="qwen2.5-coder:14b-instruct-q4_K_M",
-    prompt=f"""Write tests for the code below.
+# Prepare the prompt instructions
+PROMPT="Write tests for the code below.
 
 ## What was implemented
-{context}
+$(cat .claude/context/task_context.md)
 
 ## Implemented code
-{implemented_code}
+$(cat <changed_file_path>)
 
-## Existing test style to follow (mirror this exactly)
-{existing_test_example}
+## Existing test style to follow
+$(cat <existing_test_file> || echo 'None')
 
 ## Rules
 - Cover: happy paths, edge cases, error handling
-- Each test must be independent (no shared mutable state)
-- No sleeps in tests
-- Python/pytest: if code calls Ollama/LLM, skip with @pytest.mark.skipif(not ollama_available(), reason="Ollama not running")
-- TypeScript: mock only external HTTP calls, not internal logic
-- Write only the test file contents, no explanations
+- Each test must be independent
+- Write ONLY the complete test file contents, no explanations"
 
-Write the complete test file:""",
-    options={{"num_ctx": 32768, "temperature": 0.1}}
-)
-print(result["response"])
-PYEOF
+# Call Ollama via role
+bash ~/.claude/call_ollama.sh --role coder --prompt "$PROMPT"
 ```
 
 If Ollama is not running: `ollama serve > /dev/null 2>&1 & sleep 3`
@@ -108,31 +94,20 @@ If tests fail:
 2. Send failing test + error to Ollama for a fix:
 
 ```bash
-python3 - <<'PYEOF'
-import ollama
-
-error = """<paste full test error output>"""
-test_code = open("<test_file_path>").read()
-impl_code = open("<changed_file_path>").read()
-
-result = ollama.generate(
-    model="qwen2.5-coder:14b-instruct-q4_K_M",
-    prompt=f"""Fix the failing tests.
+PROMPT="Fix the failing tests.
 
 ## Error
-{error}
+<paste full test error output>
 
 ## Current test file
-{test_code}
+$(cat <test_file_path>)
 
 ## Implementation being tested
-{impl_code}
+$(cat <changed_file_path>)
 
-Write the corrected complete test file:""",
-    options={{"num_ctx": 32768, "temperature": 0.1}}
-)
-print(result["response"])
-PYEOF
+Write the corrected complete test file:"
+
+bash ~/.claude/call_ollama.sh --role coder --prompt "$PROMPT"
 ```
 
 3. Apply fix and run again

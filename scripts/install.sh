@@ -13,13 +13,42 @@ SYMLINK_TARGETS=(
   "skills"
   "scripts/call_ollama.sh"
   "scripts/local-commit.sh"
+  "scripts/open-pr.sh"
+  "scripts/analyze_hardware.sh"
+  "scripts/analyze_soft.sh"
 )
 
 echo "Installing ai-orchestrator from: $REPO_DIR"
 echo "Target: $CLAUDE_DIR"
 echo ""
 
+# Run software dependency analysis first
+bash "$REPO_DIR/scripts/analyze_soft.sh"
+echo ""
+
 mkdir -p "$CLAUDE_DIR"
+
+# Initialize llm-config.json in repo if not exists
+REPO_CONFIG="$REPO_DIR/llm-config.json"
+GLOBAL_CONFIG="$CLAUDE_DIR/llm-config.json"
+
+if [[ ! -f "$REPO_CONFIG" ]]; then
+    echo "Initializing llm-config.json in project root..."
+    cat > "$REPO_CONFIG" <<EOF
+{
+  "models": {
+    "coder": "hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS",
+    "reviewer": "qwen2.5-coder:7b",
+    "commit": "qwen2.5-coder:1.5b",
+    "embedding": "nomic-embed-text"
+  }
+}
+EOF
+fi
+
+# Symlink config to global location
+echo "🔗 Symlinking llm-config.json to $GLOBAL_CONFIG"
+ln -sfn "$REPO_CONFIG" "$GLOBAL_CONFIG"
 
 backup_if_exists() {
   local target="$CLAUDE_DIR/$1"
@@ -61,11 +90,17 @@ if grep -q "alias commit=" "$SHELL_RC" 2>/dev/null; then
   echo "  ✓ alias commit already exists in $SHELL_RC"
 else
   echo "" >> "$SHELL_RC"
-  echo "# ai-orchestrator: commit agent" >> "$SHELL_RC"
+  echo "# ai-orchestrator aliases" >> "$SHELL_RC"
   echo "$ALIAS_LINE" >> "$SHELL_RC"
-  echo "  ✓ alias commit → added to $SHELL_RC"
-  echo "    Run: source $SHELL_RC"
+  echo "  ✓ alias commit added"
 fi
+
+for alias_cmd in "local-commit" "open-pr"; do
+  if ! grep -q "alias $alias_cmd=" "$SHELL_RC" 2>/dev/null; then
+    echo "alias $alias_cmd='~/.claude/$alias_cmd.sh'" >> "$SHELL_RC"
+    echo "  ✓ alias $alias_cmd added to $SHELL_RC"
+  fi
+done
 
 # Make helper scripts executable
 if [[ -f "$REPO_DIR/scripts/call_ollama.sh" ]]; then
@@ -78,30 +113,13 @@ if [[ -f "$REPO_DIR/scripts/local-commit.sh" ]]; then
   echo "  ✓ local-commit.sh is executable"
 fi
 
-echo ""
-echo "Done. To update: cd $REPO_DIR && git pull"
-
-# Optional: pull Ollama models
-if command -v ollama &>/dev/null; then
-  echo ""
-  read -r -p "Pull Ollama models? (y/N) " pull_models
-  if [[ "$pull_models" =~ ^[Yy]$ ]]; then
-    models=(
-      "qwen2.5-coder:14b-instruct-q4_K_M"
-      "qwen2.5-coder:7b"
-      "qwen2.5-coder:1.5b"
-      "qwen3:8b"
-      "nomic-embed-text"
-    )
-    for model in "${models[@]}"; do
-      echo "Pulling $model..."
-      ollama pull "$model"
-    done
-  fi
-else
-  echo ""
-  echo "Note: Ollama not found. Install from https://ollama.com and pull models listed in CLAUDE.md"
+if [[ -f "$REPO_DIR/scripts/open-pr.sh" ]]; then
+  chmod +x "$REPO_DIR/scripts/open-pr.sh"
+  echo "  ✓ open-pr.sh is executable"
 fi
+
+echo ""
+bash "$REPO_DIR/scripts/analyze_hardware.sh"
 
 echo ""
 read -r -p "Generate/update ai_rules.md for IDE agents in current directory ($PWD)? (y/N) " gen_rules

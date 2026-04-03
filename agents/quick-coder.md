@@ -22,18 +22,10 @@ Handle small, targeted code changes fast using the lightest local model.
 ## How to Generate Code
 
 ```bash
-python3 - <<'PYEOF'
-import ollama
+PROMPT="<focused prompt for a single function or snippet>"
 
-prompt = """<your focused prompt — keep it short, include only the relevant function/snippet>"""
-
-result = ollama.generate(
-    model="qwen2.5-coder:1.5b",
-    prompt=prompt,
-    options={"num_ctx": 4096, "temperature": 0.1}
-)
-print(result["response"])
-PYEOF
+# Call Ollama via role
+bash ~/.claude/call_ollama.sh --role commit --prompt "$PROMPT"
 ```
 
 If Ollama is not running: `ollama serve > /dev/null 2>&1 & sleep 3`
