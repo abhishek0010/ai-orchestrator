@@ -1,12 +1,12 @@
-# claude-setup
+# ai-orchestrator
 
-Portable Claude Code configuration: agents, slash commands, and language standards.  
+Portable AI Developer setup: agents, slash commands, IDE orchestration, and language standards.  
 Works with any project — TypeScript, Python, Flutter, Swift, C++.
 
 ## What's included
 
 ```
-claude-setup/
+ai-orchestrator/
 ├── CLAUDE.md          # Global instructions for Claude Code
 ├── agents/            # Subagents (run automatically via /implement)
 │   ├── planner.md     # Explores codebase, writes implementation plan
@@ -67,8 +67,8 @@ The `install.sh` script will offer to pull these automatically.
 ## Installation
 
 ```bash
-git clone <your-repo-url> ~/Projects/claude-setup
-cd ~/Projects/claude-setup
+git clone https://github.com/Mybono/ai-orchestrator ~/Projects/ai-orchestrator
+cd ~/Projects/ai-orchestrator
 chmod +x install.sh
 ./install.sh
 ```
@@ -85,7 +85,7 @@ The script creates symlinks from `~/.claude/` into this repo, so a `git pull` is
 
 ### Shell alias
 
-`install.sh` adds a `commit` command to your shell that runs the commit agent directly via Haiku — no Sonnet overhead:
+`install.sh` adds a `commit` command to your shell that runs the commit agent directly via local LLMs — no API token overhead:
 
 ```bash
 commit   # stage all changes and commit, from any git repo
@@ -107,33 +107,21 @@ Claude also responds to natural language:
 - "implement" → runs /implement
 - "write docs" → runs doc-writer agent
 
-## IDE Agent (Antigravity/Gemini) Delegation Workflow
+## IDE Agent Delegation Workflow (Antigravity & Cursor)
 
-This repository also supports native IDE-embedded agents (like Antigravity or Gemini) that act as an **Architect and Reviewer**. 
-
-Instead of routing through bash hooks and markdown aliases, the IDE embedded agent will:
-1. Act as the **Planner**, forming isolated context chunks (`/tmp/context.md`).
-2. Delegate heavy generation (like large code writing or documentation writing) to local Ollama via:
-   `python3 ~/Projects/claude-setup/call_ollama.py --model qwen2.5-coder:14b --prompt "implement X" --context-file /tmp/context.md`
-3. Act as the **Reviewer**, validating the Ollama output against language standards, and safely applying it to the open IDE session.
-- **Code generation**: `qwen2.5-coder:14b`
-- **Documentation**: `qwen3:8b` 
-
-## IDE Agent Delegation Workflow (Antigravity)
-
-*Note: The core Claude Code workflow (with `/implement`, hooks and `.md` agents) remains fully intact and works exactly as described above. The following process applies exclusively to embedded IDE agents (such as Antigravity).*
+*Note: The core CLI workflow (with `/implement`, hooks and `.md` agents) remains fully intact and works exactly as described above. The following process applies exclusively to embedded IDE agents.*
 
 When working with an IDE-embedded agent (like Antigravity), it acts as the Architect and Reviewer directly within the editor. Instead of using the Markdown agent pipeline, it works by:
 1. Creating an isolated task context file (e.g., `/tmp/context.md`).
 2. Delegating heavy code/documentation generation to the local Ollama model via terminal:
-   `./call_ollama.sh --model qwen2.5-coder:14b --prompt "implement X" --context-file /tmp/context.md`
+   `bash ~/.claude/call_ollama.sh --model qwen2.5-coder:14b --prompt "implement X" --context-file /tmp/context.md`
    *(For documentation, `qwen3:8b` is used).*
 3. Receiving the clean textual response, reviewing it against the standards in `/skills/`, and securely applying the code directly into the active IDE session.
 
 ## Updating
 
 ```bash
-cd ~/Projects/claude-setup
+cd ~/Projects/ai-orchestrator
 git pull
 ```
 

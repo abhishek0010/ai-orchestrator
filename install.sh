@@ -3,16 +3,19 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
-BACKUP_DIR="$CLAUDE_DIR/backups/claude-setup-$(date +%Y%m%d_%H%M%S)"
+BACKUP_DIR="$CLAUDE_DIR/backups/ai-orchestrator-$(date +%Y%m%d_%H%M%S)"
 
 SYMLINK_TARGETS=(
   "CLAUDE.md"
   "agents"
   "commands"
   "skills"
+  "call_ollama.sh"
+  "local-commit.sh"
+  "IDE_AGENT_RULES.md"
 )
 
-echo "Installing claude-setup from: $REPO_DIR"
+echo "Installing ai-orchestrator from: $REPO_DIR"
 echo "Target: $CLAUDE_DIR"
 echo ""
 
@@ -57,7 +60,7 @@ if grep -q "alias commit=" "$SHELL_RC" 2>/dev/null; then
   echo "  ✓ alias commit already exists in $SHELL_RC"
 else
   echo "" >> "$SHELL_RC"
-  echo "# claude-setup: commit agent" >> "$SHELL_RC"
+  echo "# ai-orchestrator: commit agent" >> "$SHELL_RC"
   echo "$ALIAS_LINE" >> "$SHELL_RC"
   echo "  ✓ alias commit → added to $SHELL_RC"
   echo "    Run: source $SHELL_RC"
