@@ -98,3 +98,17 @@ else
   echo ""
   echo "Note: Ollama not found. Install from https://ollama.com and pull models listed in CLAUDE.md"
 fi
+
+echo ""
+read -r -p "Generate/update ai_rules.md for IDE agents in current directory ($PWD)? (y/N) " gen_rules
+if [[ "$gen_rules" =~ ^[Yy]$ ]]; then
+  if [[ -f "$PWD/ai_rules.md" ]]; then
+    echo "  ! ai_rules.md already exists. Appending IDE orchestrator rules to the EOF..."
+    echo "" >> "$PWD/ai_rules.md"
+    cat "$REPO_DIR/IDE_AGENT_RULES.md" >> "$PWD/ai_rules.md"
+    echo "  ✓ Orchestrator rules successfully appended"
+  else
+    cat "$REPO_DIR/IDE_AGENT_RULES.md" > "$PWD/ai_rules.md"
+    echo "  ✓ Created new ai_rules.md with orchestrator templates"
+  fi
+fi
