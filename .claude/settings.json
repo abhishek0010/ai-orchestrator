@@ -11,7 +11,11 @@
       "Bash(claude -p \"what is your role? answer in one sentence\" --agent commit --model haiku)",
       "Read(//Users/mavox/**)",
       "Bash(claude -p \"stage all changes and commit\" --agent commit --model haiku --allowedTools \"Bash\")",
-      "Bash(zsh -i -c \"commit\")"
+      "Bash(zsh -i -c \"commit\")",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(echo \"exit: $?\")"
     ],
     "additionalDirectories": [
       "/Users/mavox"

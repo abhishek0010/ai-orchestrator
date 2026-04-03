@@ -55,7 +55,9 @@ Step 3 — reviewer ×N  │ Claude Haiku (parallel)  │ orchestrates; Ollama q
 **Agents available on demand** (not auto-run):
 - `test-agent` — write and run tests for implemented code (spawn manually when needed)
 
-**Trigger rules** — run automatically without waiting for a slash command:
+**Trigger rules** — BLOCKING REQUIREMENT: invoke the agent/skill BEFORE generating any other response:
 - User says "commit", "сделай коммит", "закоммить" → run `commit` agent
 - User says "implement", "напиши код", "добавь фичу" → run `implement` skill
-- User asks to write, create, or update documentation / docs / README → run `doc-writer` agent
+- User asks to write, create, or update documentation / docs / README / ридми / документацию → run `doc-writer` agent
+
+**NEVER edit README.md or docs/ files directly** — always use the `doc-writer` agent. A hook will block direct edits anyway.

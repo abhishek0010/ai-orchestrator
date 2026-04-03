@@ -80,7 +80,18 @@ The script creates symlinks from `~/.claude/` into this repo, so a `git pull` is
 1. Creates `~/.claude/` if it doesn't exist
 2. Backs up any existing files to `~/.claude/backups/`
 3. Creates symlinks: `~/.claude/CLAUDE.md`, `~/.claude/agents/`, `~/.claude/commands/`, `~/.claude/skills/`, `~/.claude/settings.json`
-4. Optionally pulls Ollama models
+4. Adds `commit` shell alias to `~/.zshrc` (or `~/.bashrc`)
+5. Optionally pulls Ollama models
+
+### Shell alias
+
+`install.sh` adds a `commit` command to your shell that runs the commit agent directly via Haiku — no Sonnet overhead:
+
+```bash
+commit   # stage all changes and commit, from any git repo
+```
+
+After install, run `source ~/.zshrc` to activate it in the current terminal.
 
 ## Usage
 

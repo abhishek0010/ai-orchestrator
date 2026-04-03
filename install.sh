@@ -34,6 +34,24 @@ for item in "${SYMLINK_TARGETS[@]}"; do
   echo "  ✓ $item"
 done
 
+# Add shell alias
+SHELL_RC="$HOME/.zshrc"
+if [[ "$SHELL" == */bash ]]; then
+  SHELL_RC="$HOME/.bashrc"
+fi
+
+ALIAS_LINE="alias commit='claude -p \"stage all changes and commit\" --agent commit --model haiku --allowedTools \"Bash\"'"
+
+if grep -q "alias commit=" "$SHELL_RC" 2>/dev/null; then
+  echo "  ✓ alias commit already exists in $SHELL_RC"
+else
+  echo "" >> "$SHELL_RC"
+  echo "# claude-setup: commit agent" >> "$SHELL_RC"
+  echo "$ALIAS_LINE" >> "$SHELL_RC"
+  echo "  ✓ alias commit → added to $SHELL_RC"
+  echo "    Run: source $SHELL_RC"
+fi
+
 echo ""
 echo "Done. To update: cd $REPO_DIR && git pull"
 
