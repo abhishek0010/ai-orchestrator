@@ -62,7 +62,7 @@ All code generation runs through local Ollama models, not Claude API tokens.
 Pull the required models:
 
 ```bash
-ollama pull qwen2.5-coder:14b-instruct-q4_K_M   # main code generation
+ollama pull hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS     # main code generation
 ollama pull qwen2.5-coder:7b                      # code review
 ollama pull qwen2.5-coder:1.5b                    # quick fixes, commits
 ollama pull qwen3:8b                              # planning fallback, docs

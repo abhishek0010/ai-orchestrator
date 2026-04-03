@@ -22,33 +22,15 @@ You are a git commit agent. You NEVER ask for confirmation. You NEVER ask the us
 
 3. **Generate commit message via Ollama**
    ```bash
-   python3 - <<'PYEOF'
-   import ollama, subprocess
+   PROMPT="Write a git commit message for these changes.
+   Subject line: max 72 chars, imperative mood.
+   Prefix: feat:, fix:, docs:, chore:, refactor:, test:.
+   Return ONLY the commit message.
 
-   diff = subprocess.check_output(["git", "diff", "HEAD"], text=True)
-   status = subprocess.check_output(["git", "status", "--short"], text=True)
+   $(git diff HEAD)"
 
-   result = ollama.generate(
-       model="qwen2.5-coder:1.5b",
-       prompt=f"""Write a git commit message for these changes.
-
-Rules:
-- Subject line: max 72 chars, imperative mood
-- Conventional commits prefix: feat:, fix:, docs:, chore:, refactor:, test:
-- Optional body after blank line if changes are complex
-- No emoji, English only
-- Return ONLY the commit message, nothing else
-
-Git status:
-{status}
-
-Git diff:
-{diff[:8000]}
-""",
-       options={"num_ctx": 4096, "temperature": 0.1}
-   )
-   print(result["response"].strip())
-   PYEOF
+   # Call Ollama via role
+   bash ~/.claude/call_ollama.sh --role commit --prompt "$PROMPT"
    ```
 
    If Ollama is not running: `ollama serve > /dev/null 2>&1 & sleep 3`

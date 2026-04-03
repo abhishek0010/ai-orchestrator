@@ -25,42 +25,22 @@ This file contains: the plan, which files to change, what functions to add, and 
 
 ## Step 2 — Generate Code via Ollama
 
-For any non-trivial code generation, use Python to call Ollama (safe with any file content):
+For non-trivial code generation, use the local Ollama script (which handles large contexts safely):
 
 ```bash
-python3 - <<'PYEOF'
-import ollama, sys
+# Prepare the prompt instructions
+PROMPT="## Your Task
+<one sentence description of what to implement>
 
-prompt = """## Your Task
-<one sentence from the Task section of the context file>
+## Exact Signatures
+<paste signatures>
 
-## Language Standards — follow these rules strictly when writing code
-<paste the full "Key Standards for This Task" section from the context file>
+## File Contents
+<paste context>"
 
-## Exact Signatures to implement
-<paste the Exact Signatures section>
-
-## Patterns to follow (copy this style)
-<paste the Patterns to Follow section>
-
-## Anti-patterns — do NOT do this
-<paste the Anti-patterns section>
-
-## Relevant file contents
-<paste file contents from the context file>
-
-## What to implement
-<paste the Plan and Functions to Add/Modify sections>
-
-Write only the code. No explanations."""
-
-result = ollama.generate(
-    model="qwen2.5-coder:14b-instruct-q4_K_M",
-    prompt=prompt,
-    options={"num_ctx": 32768, "temperature": 0.1}
-)
-print(result["response"])
-PYEOF
+# Call Ollama via role
+# The response will be the raw code
+bash ~/.claude/call_ollama.sh --role coder --prompt "$PROMPT"
 ```
 
 If Ollama is not running, start it first:
@@ -91,6 +71,6 @@ Use your own reasoning (without Ollama) only for:
 
 - Read `.claude/context/task_context.md` FIRST — always
 - Never redefine types that exist in `agents/types.py`
-- Default model is `qwen2.5-coder:14b-instruct-q4_K_M` — do not change it
+- Model is managed via `~/.claude/llm-config.json` (role: `coder`) — do not change it
 - Keep generated code minimal — no extra docstrings, no over-engineering
-- When constructing Ollama prompts, paste file contents from the context file directly into the Python heredoc — no shell interpolation, no escaping issues
+- When constructing Ollama prompts, paste file contents from the context file directly into the bash PROMPT variable — no escaping issues

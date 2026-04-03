@@ -29,29 +29,21 @@ import ollama, subprocess
 
 standards = open(".claude/skills/<lang>-code-standarts.md").read()
 
-diff = subprocess.check_output(["git", "diff", "HEAD", "--", "<file_path>"], text=True)
-if not diff.strip():
-    # New file — use full contents
-    diff = open("<file_path>").read()
-    diff_label = "Full file (new)"
-else:
-    diff_label = "Git diff (changed lines only)"
+## Step 3 — Review via Ollama
 
-result = ollama.generate(
-    model="qwen2.5-coder:7b",
-    prompt=f"""Review the code changes below against the project standards.
-Check for: bugs, logic errors, edge cases, and standards violations.
-Be concise and specific. For each issue state: what is wrong, which standard it violates, and the fix.
+For each changed file, call Ollama to get a verdict:
 
-## Project Standards
-{standards}
+```bash
+PROMPT="Review the following file changes against the project standards.
+Return only 'LGTM' OR a bulleted list of issues.
 
-## {diff_label}
-{diff}""",
-    options={"num_ctx": 16384, "temperature": 0.1}
-)
-print(result["response"])
-PYEOF
+## File context
+$(cat <file_path>)
+
+## Standards
+<paste standards>"
+
+bash ~/.claude/call_ollama.sh --role reviewer --prompt "$PROMPT"
 ```
 
 If Ollama is not running, start it: `ollama serve &` then wait 3 seconds.

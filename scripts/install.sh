@@ -14,6 +14,7 @@ SYMLINK_TARGETS=(
   "scripts/call_ollama.sh"
   "scripts/local-commit.sh"
   "scripts/open-pr.sh"
+  "scripts/analyze_hardware.sh"
 )
 
 echo "Installing ai-orchestrator from: $REPO_DIR"
@@ -21,6 +22,44 @@ echo "Target: $CLAUDE_DIR"
 echo ""
 
 mkdir -p "$CLAUDE_DIR"
+
+# Check and install dependencies (jq)
+if ! command -v jq &>/dev/null; then
+    echo "jq not found. Attempting to install..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if command -v brew &>/dev/null; then
+            brew install jq
+        else
+            echo "❌ Error: Homebrew not found. Please install jq manually: https://jqlang.github.io/jq/download/"
+            exit 1
+        fi
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command -v apt-get &>/dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+        elif command -v dnf &>/dev/null; then
+            sudo dnf install -y jq
+        else
+            echo "❌ Error: Could not detect package manager. Please install jq manually."
+            exit 1
+        fi
+    fi
+fi
+
+# Initialize llm-config.json if not exists
+CONFIG_DEST="$CLAUDE_DIR/llm-config.json"
+if [[ ! -f "$CONFIG_DEST" ]]; then
+    echo "Initializing llm-config.json with defaults..."
+    cat > "$CONFIG_DEST" <<EOF
+{
+  "models": {
+    "coder": "qwen2.5-coder:14b-instruct-q4_K_M",
+    "reviewer": "qwen2.5-coder:7b",
+    "commit": "qwen2.5-coder:1.5b",
+    "embedding": "nomic-embed-text"
+  }
+}
+EOF
+fi
 
 backup_if_exists() {
   local target="$CLAUDE_DIR/$1"

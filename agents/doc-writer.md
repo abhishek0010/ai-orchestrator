@@ -47,53 +47,23 @@ Read relevant `.md` files and any inline docstrings in the changed source files.
 Build a focused prompt from the diff and existing docs, then call Ollama:
 
 ```bash
-python3 - <<'PYEOF'
-import ollama, subprocess
-
-standards = open("/Users/mavox/.claude/skills/doc-standarts.md").read()
-
-diff = subprocess.check_output(["git", "diff", "HEAD"], text=True)
-if not diff.strip():
-    diff = subprocess.check_output(["git", "diff"], text=True)
-
-# Read existing README if present
-try:
-    existing_readme = open("README.md").read()
-except FileNotFoundError:
-    existing_readme = "None"
-
-prompt = f"""You are a technical writer. Update or create documentation based on the code changes below.
+PROMPT="You are a technical writer. Update or create documentation based on the code changes below.
 
 ## Documentation Standards
-{standards}
+$(cat /Users/mavox/.claude/skills/doc-standarts.md)
 
 ## Existing README
-{existing_readme}
+$(cat README.md || echo 'None')
 
 ## Code Changes (git diff)
-{diff}
+$(git diff HEAD || git diff)
 
 ## Task
 1. Identify what is new or changed in the diff
-2. Determine which parts of the documentation need to be created or updated
-3. Output the updated documentation content
+2. Output the updated documentation content"
 
-Rules:
-- English only, no emojis
-- Only document what is actually in the diff — do not invent or assume
-- If updating existing docs, output the full updated version of the relevant section(s)
-- If creating new docs, follow the structure from the standards exactly
-- Be specific: use actual function names, parameter names, and config keys from the diff
-"""
-
-result = ollama.generate(
-    model="qwen3:8b",
-    prompt=prompt,
-    options={"num_ctx": 32768, "temperature": 0.2},
-    think=False
-)
-print(result["response"])
-PYEOF
+# Call Ollama via role
+bash ~/.claude/call_ollama.sh --role reviewer --prompt "$PROMPT"
 ```
 
 If Ollama is not running, start it: `ollama serve &` then wait 3 seconds.

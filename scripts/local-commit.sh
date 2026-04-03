@@ -22,20 +22,14 @@ fi
 TMP_DIFF=$(mktemp)
 echo "$DIFF" > "$TMP_DIFF"
 
-echo "🤖 Ollama (qwen2.5-coder:7b) is analyzing the code and writing a commit message..."
-PROMPT=$(cat << 'EOF'
-Generate a Conventional Commit message based on this git diff.
-Rules:
-- Format: "type(scope): description"
-- Subject line: max 72 chars, imperative mood
-- Conventional commits prefix: feat:, fix:, docs:, chore:, refactor:, test:
-- Optional body after blank line if changes are complex
-- No emoji, English only
-- Return ONLY the commit message, nothing else. No markdown formatting.
-EOF
-)
-# Call the helper script to query local Ollama
-MESSAGE=$("$OLLAMA_SCRIPT" --model qwen2.5-coder:7b --prompt "$PROMPT" --context-file "$TMP_DIFF")
+# 3. Call Ollama (commit role)
+echo "🤖 Ollama is analyzing the code and writing a commit message..."
+
+PROMPT="Review the following git diff and write a concise, meaningful commit message. 
+One line summary (max 50 chars), then a blank line, then a bulleted list of changes if necessary.
+Write ONLY the message, no extra text, no 'Short summary:' prefix."
+
+MESSAGE=$("$OLLAMA_SCRIPT" --role commit --prompt "$PROMPT" --context-file "$TMP_DIFF")
 
 # Clean up Markdown backticks that small models often ignore instructions to omit
 MESSAGE=$(echo "$MESSAGE" | sed '/^```/d')

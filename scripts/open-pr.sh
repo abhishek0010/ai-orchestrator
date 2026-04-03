@@ -33,19 +33,17 @@ echo "$DIFF" >> "$TMP_CONTEXT"
 echo "Ollama (qwen2.5-coder:7b) is drafting your PR description..."
 
 PROMPT=$(cat << 'EOF'
-Act as a Senior Open Source Maintainer. Write a professional Pull Request Title and Description based on the provided Git Commits and Git Diff. 
+# 3. Call Ollama (reviewer role)
+echo "🤖 Ollama is drafting your PR description..."
 
-Follow this structure EXACTLY:
-TITLE: <Clear, concise title>
-BODY:
-<A markdown-formatted body including:>
-- **Summary**: 2-3 sentences explaining the overarching goal and business value.
-- **Key Changes**: A bulleted list of the technical changes made.
-- **Impact**: Any potential side-effects, areas to review carefully, or notes for the reviewer.
-EOF
-)
+PROMPT="Generate a GitHub PR title and description based on the following git log and diff. 
+Return only the content in the following format:
+Title: <brief meaningful title>
 
-MESSAGE=$("$OLLAMA_SCRIPT" --model qwen2.5-coder:7b --prompt "$PROMPT" --context-file "$TMP_CONTEXT")
+Description:
+<detailed description of changes>"
+
+MESSAGE=$("$OLLAMA_SCRIPT" --role reviewer --prompt "$PROMPT" --context-file "$TMP_CONTEXT")
 rm -f "$TMP_CONTEXT"
 
 if [ -z "$MESSAGE" ] || [[ "$MESSAGE" == *"Error"* ]]; then
