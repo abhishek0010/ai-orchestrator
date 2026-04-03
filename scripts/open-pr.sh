@@ -8,7 +8,7 @@ echo "Gathering git context for Pull Request..."
 
 # Check if there are uncommitted changes
 if git status --porcelain | grep -q .; then
-    read -p "💡 You have uncommitted changes. Worth committing before opening a PR? (y/N) " confirm
+    read -rp "You have uncommitted changes. Worth committing before opening a PR? (y/N) " confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
         echo "Committing locally..."
         "$SCRIPT_DIR/local-commit.sh"
@@ -24,8 +24,8 @@ fi
 echo "Target branch identified as: $TARGET_BRANCH"
 
 # Get commits (log) and diff
-COMMITS=$(git log origin/$TARGET_BRANCH..HEAD --no-merges --pretty=format:"* %s" 2>/dev/null || git log $TARGET_BRANCH..HEAD --no-merges --pretty=format:"* %s" 2>/dev/null)
-DIFF=$(git diff origin/$TARGET_BRANCH...HEAD 2>/dev/null || git diff $TARGET_BRANCH...HEAD 2>/dev/null)
+COMMITS=$(git log "origin/$TARGET_BRANCH..HEAD" --no-merges --pretty=format:"* %s" 2>/dev/null || git log "$TARGET_BRANCH..HEAD" --no-merges --pretty=format:"* %s" 2>/dev/null)
+DIFF=$(git diff "origin/$TARGET_BRANCH...HEAD" 2>/dev/null || git diff "$TARGET_BRANCH...HEAD" 2>/dev/null)
 
 if [ -z "$COMMITS" ] && [ -z "$DIFF" ]; then
     echo "❌ No differences found between current branch and $TARGET_BRANCH."
@@ -34,10 +34,12 @@ fi
 
 # Save context to temporary file
 TMP_CONTEXT=$(mktemp)
-echo "COMMITS:" > "$TMP_CONTEXT"
-echo "$COMMITS" >> "$TMP_CONTEXT"
-echo -e "\n\nCODE DIFF:" >> "$TMP_CONTEXT"
-echo "$DIFF" >> "$TMP_CONTEXT"
+{
+    echo "COMMITS:"
+    echo "$COMMITS"
+    echo -e "\n\nCODE DIFF:"
+    echo "$DIFF"
+} > "$TMP_CONTEXT"
 
 echo "Ollama (qwen2.5-coder:7b) is drafting your PR description..."
 
@@ -77,7 +79,7 @@ echo -e "==============================================\n"
 
 # Check for Github CLI and Github remote
 if command -v gh &> /dev/null && git remote -v 2>/dev/null | grep -q "github.com"; then
-    read -p "GitHub and 'gh' CLI detected! Create this PR automatically? (y/N) " confirm
+    read -rp "GitHub and 'gh' CLI detected! Create this PR automatically? (y/N) " confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
         echo "Creating PR..."
         gh pr create --title "$TITLE" --body "$BODY"
