@@ -63,6 +63,12 @@ else
   echo "    Run: source $SHELL_RC"
 fi
 
+# Make helper scripts executable
+if [[ -f "$REPO_DIR/call_ollama.sh" ]]; then
+  chmod +x "$REPO_DIR/call_ollama.sh"
+  echo "  ✓ call_ollama.sh is executable"
+fi
+
 echo ""
 echo "Done. To update: cd $REPO_DIR && git pull"
 

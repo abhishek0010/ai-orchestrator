@@ -119,6 +119,17 @@ Instead of routing through bash hooks and markdown aliases, the IDE embedded age
 - **Code generation**: `qwen2.5-coder:14b`
 - **Documentation**: `qwen3:8b` 
 
+## IDE Agent Delegation Workflow (Antigravity)
+
+*Note: The core Claude Code workflow (with `/implement`, hooks and `.md` agents) remains fully intact and works exactly as described above. The following process applies exclusively to embedded IDE agents (such as Antigravity).*
+
+When working with an IDE-embedded agent (like Antigravity), it acts as the Architect and Reviewer directly within the editor. Instead of using the Markdown agent pipeline, it works by:
+1. Creating an isolated task context file (e.g., `/tmp/context.md`).
+2. Delegating heavy code/documentation generation to the local Ollama model via terminal:
+   `./call_ollama.sh --model qwen2.5-coder:14b --prompt "implement X" --context-file /tmp/context.md`
+   *(For documentation, `qwen3:8b` is used).*
+3. Receiving the clean textual response, reviewing it against the standards in `/skills/`, and securely applying the code directly into the active IDE session.
+
 ## Updating
 
 ```bash
