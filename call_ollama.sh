@@ -21,7 +21,6 @@ if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
     CONTEXT=$(cat "$CONTEXT_FILE")
 fi
 
-# Формируем JSON через jq (чтобы безопасно экранировать любой код!)
 PAYLOAD=$(jq -n \
   --arg model "$MODEL" \
   --arg context "$CONTEXT" \
@@ -40,7 +39,6 @@ PAYLOAD=$(jq -n \
     stream: false
   }')
 
-# Отправляем запрос к локальному Ollama API. jq -r вытащит чистый текст
 curl -s -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD" | jq -r '.message.content'
