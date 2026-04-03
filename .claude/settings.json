@@ -10,7 +10,8 @@
       "Bash(claude --version)",
       "Bash(claude -p \"what is your role? answer in one sentence\" --agent commit --model haiku)",
       "Read(//Users/mavox/**)",
-      "Bash(claude -p \"stage all changes and commit\" --agent commit --model haiku --allowedTools \"Bash\")"
+      "Bash(claude -p \"stage all changes and commit\" --agent commit --model haiku --allowedTools \"Bash\")",
+      "Bash(zsh -i -c \"commit\")"
     ],
     "additionalDirectories": [
       "/Users/mavox"
