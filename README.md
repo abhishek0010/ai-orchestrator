@@ -77,7 +77,7 @@ The system uses roles to determine which model to use for which task. The config
 |------|---------------|---------|
 | `coder` | `qwen2.5-coder:14b...` | Heavy code generation (main agent) |
 | `reviewer` | `qwen2.5-coder:7b` | Code review and documentation |
-| `commit` | `qwen2.5-coder:1.5b` | Commit messages and tiny fixes |
+| `commit` | `qwen2.5-coder:7b` | Commit messages and tiny fixes |
 | `embedding` | `nomic-embed-text` | Semantic search and RAG |
 
 Example of `llm-config.json`:
@@ -87,7 +87,7 @@ Example of `llm-config.json`:
   "models": {
     "coder": "hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS",
     "reviewer": "qwen2.5-coder:7b",
-    "commit": "qwen2.5-coder:1.5b",
+    "commit": "qwen2.5-coder:7b",
     "embedding": "nomic-embed-text"
   }
 }

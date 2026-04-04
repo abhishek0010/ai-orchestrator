@@ -16,6 +16,7 @@ SYMLINK_TARGETS=(
   "scripts/open-pr.sh"
   "scripts/analyze_hardware.sh"
   "scripts/analyze_soft.sh"
+  "scripts/analyze_project.sh"
 )
 
 echo "Installing ai-orchestrator from: $REPO_DIR"
@@ -98,7 +99,7 @@ else
   echo "  ✓ alias commit added"
 fi
 
-for alias_cmd in "local-commit" "open-pr"; do
+for alias_cmd in "local-commit" "open-pr" "analyze_project"; do
   if ! grep -q "alias $alias_cmd=" "$SHELL_RC" 2>/dev/null; then
     echo "alias $alias_cmd='~/.claude/$alias_cmd.sh'" >> "$SHELL_RC"
     echo "  ✓ alias $alias_cmd added to $SHELL_RC"
@@ -121,9 +122,18 @@ if [[ -f "$REPO_DIR/scripts/open-pr.sh" ]]; then
   echo "  ✓ open-pr.sh is executable"
 fi
 
+if [[ -f "$REPO_DIR/scripts/analyze_project.sh" ]]; then
+  chmod +x "$REPO_DIR/scripts/analyze_project.sh"
+  echo "  ✓ analyze_project.sh is executable"
+fi
+
 
 echo ""
 bash "$REPO_DIR/scripts/analyze_hardware.sh"
+
+echo ""
+echo "🔍 Running initial project analysis..."
+bash "$REPO_DIR/scripts/analyze_project.sh"
 
 echo ""
 echo "Setup complete! To use orchestrator rules in your project, copy ~/.claude/ai_rules.md to your project root."

@@ -14,22 +14,24 @@ Analyze a coding task, explore the codebase, and write a **context file** to dis
 
 ### Phase 0 — Load Project Overview (fast path)
 
-Before any exploration, check if `.claude/context/project_overview.md` exists:
+Before any exploration, check if `.claude/context/project_overview.md` exists and if an automated delta report is available:
 
 ```bash
-test -f .claude/context/project_overview.md && echo "EXISTS" || echo "MISSING"
+ls .claude/context/project_overview.md .claude/context/analysis_delta.md 2>/dev/null
 ```
 
-**If EXISTS** — read it immediately. Use it as the starting point for your exploration:
+**If `project_overview.md` EXISTS** — read it immediately. This is your authoritative map of the project architecture and constraints. 
 
+**If `analysis_delta.md` EXISTS** — read it as well. It contains findings from an automated scan (new files, patterns). 
+- **Action**: Merge relevant delta findings into your mental model and prepare to update the main overview in Phase 4.
+
+**Workflow adjustments with Overview:**
 - Skip re-detecting language (already recorded)
 - Skip re-reading standards file (already recorded)
-- Skip full codebase glob — instead verify only the files listed in the overview still exist and match their described purpose
-- Spot-check 1-2 key files from the overview to confirm the architecture is still accurate
+- Skip full codebase glob — verify only the files listed in the overview still exist
+- Spot-check 1-2 key files from the overview to confirm the architecture matches
 
-**If MISSING** — proceed with full Phase 1 exploration as normal.
-
-> The overview may be stale. Always verify: if any file listed in the overview is gone or its role has changed, treat the overview as partially stale and re-explore that area.
+**If `project_overview.md` MISSING** — proceed with full Phase 1 exploration as normal.
 
 ### Phase 1 — Explore
 
@@ -42,9 +44,7 @@ test -f .claude/context/project_overview.md && echo "EXISTS" || echo "MISSING"
    - `pyproject.toml` or `requirements.txt` → Python → read `.claude/skills/python-code-standarts.md`
 3. **Explore the codebase** — find relevant files using Glob and Grep
 4. **Read every relevant file in full** — do not summarize, read completely
-5. **Check `src/bytebuddy/agents/types.py`** — identify relevant shared types (Python/ByteBuddy projects only)
-6. **Check `src/bytebuddy/__init__.py`** — understand current public API (Python/ByteBuddy projects only)
-7. **Find patterns** — locate 1-3 existing functions/classes similar to what needs to be built; read them in full as style examples
+5. **Find patterns** — locate 1-3 existing functions/classes similar to what needs to be built; read them in full as style examples
 
 ### Phase 2 — Write draft
 
@@ -60,16 +60,15 @@ test -f .claude/context/project_overview.md && echo "EXISTS" || echo "MISSING"
    - Would a coder with no prior knowledge of this codebase understand exactly what to write?
 1. **Update the context file** — fix every gap found in step 9
 
-### Phase 4 — Update Project Overview (mandatory, always last)
+### Phase 4 — Maintain Project Overview (Mandatory Authoritative Step)
 
-After writing `task_context.md`, update `.claude/context/project_overview.md`.
+After writing `task_context.md`, update `.claude/context/project_overview.md`. You are the master of this file.
 
 **Rules:**
-
-- If the file does not exist — create it from scratch using everything you learned during exploration
-- If the file exists — update only the sections that changed; do NOT rewrite sections that are still accurate
-- Never remove information unless you confirmed it is stale (file deleted, pattern abandoned)
-- Add any new files, patterns, or constraints you discovered during this task
+- **Incorporate Deltas**: If `analysis_delta.md` exists, merge its valid findings into the overview and then delete the delta file.
+- **Update Sections**: Update only sections that changed based on your task exploration; do NOT rewrite accurate sections.
+- **Maintain Accuracy**: Never remove information unless confirmed stale (file deleted, pattern abandoned).
+- **Format**: Use the exact markdown structure below.
 
 Write the overview using this exact format:
 
@@ -218,5 +217,5 @@ wc -c .claude/context/task_context.md
 - Files that are only **read** (dependencies, types) may be summarized if context is too large (see above)
 - Always include `src/bytebuddy/agents/types.py` contents if any type is used or added
 - Create the `.claude/context/` directory if it does not exist: `mkdir -p .claude/context`
-- Never propose mocking Ollama in tests — flag as "requires Ollama" instead
+- Never propose mocking Ollama in tests: the system relies on real local model responses.
 - Keep the plan minimal — only what is directly needed for the task
