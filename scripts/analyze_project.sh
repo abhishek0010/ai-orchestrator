@@ -115,7 +115,10 @@ $CURRENT_OVERVIEW
 ---
 ## New Analysis Data
 
-### Structure Summary:
+### Ground Truth Structure (Reference this ONLY):
+$STRUCTURE
+
+### Structure Analysis Summary:
 $STR_SUM
 
 ### Documentation Summary:
@@ -127,6 +130,11 @@ $LOG_SUM
 ---
 ## Your Task:
 Output a Markdown report named 'Project Analysis Delta'.
+
+**STRICT NAMING RULES**: 
+1. Only mention files that are EXPLICITLY listed in the 'Ground Truth Structure'. 
+2. DO NOT invent file names, extensions, or hooks (e.g., if you don't see useTranslation.tsx, do not mention it).
+3. MATCH the exact casing and extensions from the Ground Truth (e.g., LanguageContext.tsx, NOT languageContext.ts).
 
 **CRITICAL INSTRUCTION**: Only describe the project's SOURCE code (typically in src/). DO NOT include compiled artifacts from dist/, build/, or out/ in your analysis. If you see redundant structures in both src/ and dist/, IGNORE the dist/ version.
 1. **New Files/Folders**: List any important assets found in the new analysis but missing from 'Key Files'.
