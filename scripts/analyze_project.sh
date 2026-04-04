@@ -21,13 +21,19 @@ mkdir -p "$CONTEXT_DIR"
 
 # 2. Information Gathering
 echo -e "   📂 Gathering project structure..."
-STRUCTURE=$(find . -maxdepth 3 -not -path '*/.*' -not -path '*/node_modules/*' -not -path '*/venv/*' | head -n 100)
+# Define ignore patterns (regex for grep -v or multiple -not -path for find)
+IGNORE_PATTERN='(\.git|\.next|node_modules|venv|dist|build|out|target|bin|obj|coverage|\.claude/backups)'
+
+# 1. Structure Analysis (maxdepth 4 to see subfolders in src)
+STRUCTURE=$(find . -maxdepth 4 -not -path '*/.*' | grep -Ev "$IGNORE_PATTERN" | head -n 120)
 
 echo -e "   📄 Locating documentation..."
-MD_FILES=$(find . -maxdepth 2 -name "*.md" -not -path '*/.*' -not -path '*/context/*' | head -n 10)
+# Include root MD files and ai_rules.md explicitly
+MD_FILES=$(find . -maxdepth 2 -name "*.md" -o -name ".cursorrules" -o -name "ai_rules.md" | grep -Ev "node_modules|dist|build|context/" | head -n 15)
 
 echo -e "   ⚙️ Identifying key logic files..."
-LOGIC_FILES=$(find . -maxdepth 2 \( -name "main*" -o -name "app*" -o -name "index*" -o -name "__init__.py" -o -name "package.json" -o -name "pyproject.toml" -o -name "scripts/*.sh" \) -not -path '*/.*' | head -n 10)
+# Prioritize src/ if it exists, otherwise look in root
+LOGIC_FILES=$(find . -maxdepth 3 \( -path "./src/*" -o -path "./scripts/*" -o -name "main*" -o -name "app*" -o -name "index*" -o -name "__init__.py" -o -name "package.json" -o -name "pyproject.toml" -o -name "llm-config.json" \) | grep -Ev "$IGNORE_PATTERN" | head -n 15)
 
 # 3. Multi-Agent Analysis
 TMP_DIR=$(mktemp -d)
@@ -52,8 +58,9 @@ analyze_docs() {
         doc_contents+="\n--- $f ---\n$(cat "$f" | head -c 2000)\n"
     done
     
-    local prompt="Review these documentation files for project '$PROJECT_NAME'. 
+    local prompt="Review these documentation and orchestration files for project '$PROJECT_NAME'. 
     Summarize the project's goals, main features, and any developer rules mentioned.
+    Pay special attention to 'ai_rules.md' or orchestration instructions.
     Output in a format suitable for 'Known Constraints' and 'Architecture' sections.
     
     DOCS:
@@ -114,12 +121,14 @@ $STR_SUM
 ### Documentation Summary:
 $DOC_SUM
 
-### Core Logic Summary:
+### Core Logic Summary (Focus on src/ and core logic):
 $LOG_SUM
 
 ---
 ## Your Task:
 Output a Markdown report named 'Project Analysis Delta'.
+
+**CRITICAL INSTRUCTION**: Only describe the project's SOURCE code (typically in src/). DO NOT include compiled artifacts from dist/, build/, or out/ in your analysis. If you see redundant structures in both src/ and dist/, IGNORE the dist/ version.
 1. **New Files/Folders**: List any important assets found in the new analysis but missing from 'Key Files'.
 2. **Architecture Changes**: Identify any new patterns or tech-stack details.
 3. **Stale Info**: Point out anything in the current overview that contradicts the new data.
