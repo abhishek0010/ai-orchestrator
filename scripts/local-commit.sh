@@ -6,7 +6,7 @@ OLLAMA_SCRIPT="$SCRIPT_DIR/call_ollama.sh"
 
 # If the staging area is empty, stage all changes
 if git diff --cached --quiet; then
-    echo "💡 Staging area is empty. Staging all changes (git add -A)..."
+    echo "Staging area is empty. Staging all changes (git add -A)..."
     git add -A
 fi
 
@@ -22,18 +22,20 @@ fi
 TMP_DIFF=$(mktemp)
 echo "$DIFF" > "$TMP_DIFF"
 
-# 3. Call Ollama (commit role)
-echo "🤖 Ollama is analyzing the code and writing a commit message..."
-
 PROJECT_NAME=$(basename "$PWD")
 CURRENT_BRANCH=$(git branch --show-current)
+STAGED_FILES=$(git diff --cached --name-only | tr '\n' ', ' | sed 's/, $//')
 
-PROMPT="Review the following git diff for the project '$PROJECT_NAME' (branch: '$CURRENT_BRANCH') and write a concise, meaningful commit message.
+echo "📂 Staged files: $STAGED_FILES"
+echo "🤖 Ollama is analyzing the code and writing a commit message..."
+
+PROMPT="As a Git expert, review this git diff for the project '$PROJECT_NAME' (branch: '$CURRENT_BRANCH').
+Write a concise, professional commit message in Conventional Commits format: type(scope): description.
+
 STRICT RULES:
-1. Base the message ONLY on the actual changes in the provided diff.
-2. Do NOT mention files or features that are not explicitly present in the diff.
-3. Use Conventional Commits format: type(scope): description.
-4. Output ONLY the commit message itself, no extra text or quotes."
+1. FOCUS ONLY on the provided diff. Do NOT hallucinate features or files not present in the diff.
+2. If the diff shows changes to prompts or LLM logic, describe them accurately.
+3. Output ONLY the message itself. No explanations, no quotes, no markdown backticks."
 
 MESSAGE=$("$OLLAMA_SCRIPT" --role commit --prompt "$PROMPT" --context-file "$TMP_DIFF")
 

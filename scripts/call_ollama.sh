@@ -63,8 +63,8 @@ jq -n \
     model: $model,
     messages: (
       if ($context != "") then [
-        {role: "system", content: ("Context information:\n\n" + $context + "\n\nYou must strictly adhere to the user instructions. Output ONLY the response requested.")},
-        {role: "user", content: $prompt}
+        {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
+        {role: "user", content: ("Context information:\n\n" + $context + "\n\n---\n\nBased on the context above, follow these instructions:\n" + $prompt)}
       ] else [
         {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
         {role: "user", content: $prompt}
