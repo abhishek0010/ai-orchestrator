@@ -13,7 +13,7 @@
 │                        check          └─ reviewer (file C) ─┘   fix loop  │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Step 1 — planner      │ Claude Sonnet (inherit)  │ detects language, reads standards,
+Step 1 — planner      │ Claude Sonnet (inherit)  │ detects language, reads standarts,
                       │                          │ explores codebase, writes context file
 Step 2 — coder        │ Claude Haiku             │ orchestrates; calls Ollama (role: coder)
 Step 2.5 — build      │ Claude Haiku             │ tsc --noEmit (TS), etc.
@@ -29,7 +29,7 @@ Step 3 — reviewer ×N  │ Claude Haiku (parallel)  │ orchestrates; calls Ol
 | `commit` | Commit messages and minor fixes | `qwen2.5-coder:1.5b` |
 | `embedding` | Semantic search and RAG | `nomic-embed-text` |
 
-**Language standards** (auto-detected by planner and reviewer):
+**Language standarts** (auto-detected by planner and reviewer):
 
 - TypeScript → `.claude/skills/ts-code-standarts.md`
 - Python → `.claude/skills/python-code-standarts.md`
@@ -43,7 +43,7 @@ Step 3 — reviewer ×N  │ Claude Haiku (parallel)  │ orchestrates; calls Ol
 | Command | When |
 |---------|------|
 | `/implement` | Full plan → code → build → review pipeline |
-| `/review` | Check current changes against language standards |
+| `/review` | Check current changes against language standarts |
 | `/commit` | Stage and commit changes (uses local LLM) |
 
 **Agents available on demand** (not auto-run):

@@ -12,7 +12,7 @@ After code has been written, examine what changed, and update or create document
 
 ## Workflow
 
-### Phase 1 — Read the Standards
+### Phase 1 — Read the standarts
 
 ```bash
 cat /Users/mavox/.claude/skills/doc-standarts.md
@@ -55,7 +55,7 @@ Build a focused prompt from the diff and existing docs, then call Ollama:
 ```bash
 PROMPT="You are a technical writer. Update or create documentation based on the code changes below.
 
-## Documentation Standards
+## Documentation standarts
 $(cat /Users/mavox/.claude/skills/doc-standarts.md)
 
 ## Existing README
@@ -76,7 +76,7 @@ If Ollama is not running, start it: `ollama serve &` then wait 3 seconds.
 
 ### Phase 4 — Apply Changes
 
-1. Review the Ollama output against the standards — remove emojis, filler phrases, invented details
+1. Review the Ollama output against the standarts — remove emojis, filler phrases, invented details
 2. Verify every function name, parameter, and example matches the actual diff
 3. Apply changes:
    - **Updating existing file**: use Edit for targeted section updates

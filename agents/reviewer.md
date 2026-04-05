@@ -14,7 +14,7 @@ Review code written by the coder agent. You call the local Ollama model for deep
 ## How to Review Code
 
 1. Detect project language from indicator files (`tsconfig.json` → TS, `pubspec.yaml` → Flutter, `Package.swift` → Swift, `CMakeLists.txt` → C++, `pyproject.toml` → Python)
-2. Read the matching standards file from `.claude/skills/`
+2. Read the matching standarts file from `.claude/skills/`
 3. Get the diff of what changed (not the full file):
 
 ```bash
@@ -23,27 +23,27 @@ git diff HEAD -- <file_path>
 
 If the output is empty (new file not yet committed), fall back to full file contents.
 
-1. Send diff + standards to Ollama:
+1. Send diff + standarts to Ollama:
 
 ```bash
 python3 - <<'PYEOF'
 import ollama, subprocess
 
-standards = open(".claude/skills/<lang>-code-standarts.md").read()
+standarts = open(".claude/skills/<lang>-code-standarts.md").read()
 
 ## Step 3 — Review via Ollama
 
 For each changed file, call Ollama to get a verdict:
 
 ```bash
-PROMPT="Review the following file changes against the project standards.
+PROMPT="Review the following file changes against the project standarts.
 Return only 'LGTM' OR a bulleted list of issues.
 
 ## File context
 $(cat <file_path>)
 
-## Standards
-<paste standards>"
+## standarts
+<paste standarts>"
 
 bash ~/.claude/call_ollama.sh --role reviewer --prompt "$PROMPT"
 ```

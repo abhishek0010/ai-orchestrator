@@ -1,6 +1,6 @@
 # ai-orchestrator
 
-Portable AI Developer setup: agents, slash commands, IDE orchestration, and language standards.  
+Portable AI Developer setup: agents, slash commands, IDE orchestration, and language standarts.  
 Works with any project — TypeScript, Python, Flutter, Swift, C++.
 
 **Now 100% Python-free.** All orchestration is handled via pure Bash and `jq`.
@@ -15,14 +15,14 @@ ai-orchestrator/
 ├── agents/            # Subagents (run automatically via /implement)
 │   ├── planner.md     # Explores codebase, writes implementation plan
 │   ├── coder.md       # Generates code via local Ollama (role: coder)
-│   ├── reviewer.md    # Reviews code against standards (role: reviewer)
+│   ├── reviewer.md    # Reviews code against standarts (role: reviewer)
 │   ├── quick-coder.md # Fast fixes (role: commit)
 │   ├── commit.md      # Stages and commits changes (role: commit)
 │   ├── doc-writer.md  # Creates/updates documentation (role: reviewer)
 │   └── test-agent.md  # Writes and runs tests (role: coder)
 ├── commands/          # Slash commands
 │   ├── implement.md   # /implement — full plan → code → review pipeline
-├── skills/            # Language coding standards
+├── skills/            # Language coding standarts
 │   ├── ...-code-standarts.md
 ├── scripts/
 │   ├── call_ollama.sh     # Central LLM interface (Bash + jq + curl)

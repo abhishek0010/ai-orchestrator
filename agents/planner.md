@@ -27,7 +27,7 @@ ls .claude/context/project_overview.md .claude/context/analysis_delta.md 2>/dev/
 
 **Workflow adjustments with Overview:**
 - Skip re-detecting language (already recorded)
-- Skip re-reading standards file (already recorded)
+- Skip re-reading standarts file (already recorded)
 - Skip full codebase glob — verify only the files listed in the overview still exist
 - Spot-check 1-2 key files from the overview to confirm the architecture matches
 
@@ -36,7 +36,7 @@ ls .claude/context/project_overview.md .claude/context/analysis_delta.md 2>/dev/
 ### Phase 1 — Explore
 
 1. **Understand the task** — clarify what needs to be built or fixed
-2. **Detect project language** — check for indicator files in the project root and read the matching standards file:
+2. **Detect project language** — check for indicator files in the project root and read the matching standarts file:
    - `tsconfig.json` → TypeScript → read `.claude/skills/ts-code-standarts.md`
    - `pubspec.yaml` → Flutter/Dart → read `.claude/skills/fluter-code-standarts.md`
    - `Package.swift` or `*.xcodeproj` → Swift → read `.claude/skills/swift-code-standarts.md`
@@ -78,7 +78,7 @@ Write the overview using this exact format:
 _Last updated: <YYYY-MM-DD> by planner after task: <one-sentence task description>_
 
 ## Language(s)
-- <language>: <indicator file(s)> — standards: `.claude/skills/<file>`
+- <language>: <indicator file(s)> — standarts: `.claude/skills/<file>`
 
 ## Key Files
 | File | Purpose |
@@ -108,10 +108,10 @@ Write exactly this structure to `.claude/context/task_context.md`:
 # Task Context
 
 ## Language
-<detected language> — standards from `.claude/skills/<file>`
+<detected language> — standarts from `.claude/skills/<file>`
 
-## Key Standards for This Task
-<paste the 3-5 most relevant rules from the language standards file that directly apply to what needs to be built — anti-patterns, naming, typing, error handling>
+## Key standarts for This Task
+<paste the 3-5 most relevant rules from the language standarts file that directly apply to what needs to be built — anti-patterns, naming, typing, error handling>
 
 ## Task
 <one sentence description of what needs to be done>

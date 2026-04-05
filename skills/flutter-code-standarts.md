@@ -1,4 +1,4 @@
-# Flutter (Dart) Code Quality Standards (Claude Code Skill)
+# Flutter (Dart) Code Quality standarts (Claude Code Skill)
 
 ## 🎯 Goal
 

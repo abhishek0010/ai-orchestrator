@@ -26,14 +26,14 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 | `scripts/call_ollama.sh` | Central LLM interface — handles prompt construction, context attachment, and raw API calls via `curl` |
 | `scripts/analyze_project.sh` | Project analyzer — multi-agent script that provides change discovery (delta reports) for the planner |
 | `commands/implement.md` | `/implement` slash command — orchestrates the full planner → coder → build check → reviewer → fix loop pipeline |
-| `commands/review.md` | `/review` slash command — detects language, reads standards, diffs HEAD, reports violations |
-| `commands/standards.md` | `/standards` slash command — detects language and prints the matching standards file |
-| `skills/ts-code-standarts.md` | TypeScript coding standards (indicator: `tsconfig.json`) |
-| `skills/python-code-standarts.md` | Python coding standards (indicator: `pyproject.toml` or `requirements.txt`) |
-| `skills/fluter-code-standarts.md` | Flutter/Dart coding standards (indicator: `pubspec.yaml`) |
-| `skills/swift-code-standarts.md` | Swift coding standards (indicator: `Package.swift` or `*.xcodeproj`) |
-| `skills/c-code-standarts.md` | C++ coding standards (indicator: `CMakeLists.txt` or `*.cpp`) |
-| `skills/doc-standarts.md` | Documentation writing standards (used by doc-writer agent) |
+| `commands/review.md` | `/review` slash command — detects language, reads standarts, diffs HEAD, reports violations |
+| `commands/standarts.md` | `/standarts` slash command — detects language and prints the matching standarts file |
+| `skills/ts-code-standarts.md` | TypeScript coding standarts (indicator: `tsconfig.json`) |
+| `skills/python-code-standarts.md` | Python coding standarts (indicator: `pyproject.toml` or `requirements.txt`) |
+| `skills/fluter-code-standarts.md` | Flutter/Dart coding standarts (indicator: `pubspec.yaml`) |
+| `skills/swift-code-standarts.md` | Swift coding standarts (indicator: `Package.swift` or `*.xcodeproj`) |
+| `skills/c-code-standarts.md` | C++ coding standarts (indicator: `CMakeLists.txt` or `*.cpp`) |
+| `skills/doc-standarts.md` | Documentation writing standarts (used by doc-writer agent) |
 | `llm-config.json` | Centralized model role configuration — symlinked to `~/.claude/llm-config.json` |
 | `.claude/settings.json.template` | Template for `settings.json` — contains `PreToolUse` hook that blocks direct edits to `README.md` and `docs/` files; uses `__HOME__` placeholder replaced by `install.sh` |
 | `settings.json` | Project-level `settings.json` — same `PreToolUse` hook without the `__HOME__` placeholder expansion (for use without install) |
@@ -43,7 +43,7 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 
 - All agents are Markdown files in `agents/` with a YAML front-matter block (`name`, `description`, `model`, `tools`)
 - All slash commands are Markdown files in `commands/` with no front-matter — they describe steps to orchestrate agents
-- Language standards are in `skills/` and are named `<lang>-code-standarts.md` (note: "standarts" not "standards" — intentional spelling in filenames)
+- Language standarts are in `skills/` and are named `<lang>-code-standarts.md` (note: "standarts" not "standarts" — intentional spelling in filenames)
 - Context files produced during a task go to `.claude/context/` — specifically `task_context.md`, `coder_output.md`, and `project_overview.md`
 - The full pipeline is always: planner writes context → coder generates code → build/type check → reviewer(s) in parallel → fix loop (max 3 rounds)
 - **Zero Python dependency**: All agents call `scripts/call_ollama.sh` directly, which uses `curl` and `jq` for API interaction.

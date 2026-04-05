@@ -26,7 +26,7 @@ For heavy generation tasks (writing large code components, tests, or extensive d
 If the user asks to "open a PR", "create a PR summary", or similar, DO NOT use IDE API tokens to read the git diff and write the text. The context is often too large.
 Instead, simply run `bash ~/.claude/open-pr.sh` and return the output. This script automatically handles grabbing commits, diffs, formatting the description, and (if installed) using the GitHub CLI to open the PR.
 
-### 4. Git Commit Standards
+### 4. Git Commit standarts
 
 - Use Conventional Commits format STRICTLY: `type(scope): description`
 - Subject line max 72 chars, imperative mood
