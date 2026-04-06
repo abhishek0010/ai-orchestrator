@@ -9,7 +9,7 @@ All orchestration is handled via pure Bash and `jq`.
 
 ## What's included
 
-```markdown
+```
 ai-orchestrator/
 ├── documentation/
 │   ├── CLAUDE.md            # Global instructions for Claude CLI
@@ -34,15 +34,15 @@ ai-orchestrator/
 │   ├── analyze_project.sh  # Multi-agent tiered project structure analysis
 │   └── install.sh         # Installer — configures dependencies and symlinks
 └── llm-config.json    # Centralized model roles (symlinked to ~/.claude/)
-```markdown
+```
 
 ## How it works
 
 The core workflow is a pipeline triggered by `/implement`:
 
-```markdown
+```
 planner → coder → build check → reviewer(s) → verdict
-```markdown
+```
 
 - **Zero Python dependency**: All agents now call `call_ollama.sh` directly, which uses `curl` and `jq` for API interaction.
 - **Role-based Config**: One source of truth for all models in `llm-config.json`.
@@ -86,12 +86,12 @@ View accumulated stats with the `/stats` command:
 
 All you need is one command to check dependencies, configure the system, and optimize models for your hardware:
 
-```bash
+```
 git clone https://github.com/Mybono/ai-orchestrator ~/Projects/ai-orchestrator
 cd ~/Projects/ai-orchestrator
 chmod +x scripts/install.sh
 ./scripts/install.sh
-```markdown
+```
 
 ### What happens during installation
 
@@ -122,7 +122,7 @@ Example of `llm-config.json`:
     "embedding": "nomic-embed-text"
   }
 }
-```markdown
+```
 
 ## IDE Agent Delegation Workflow (Antigravity & Cursor)
 
@@ -133,10 +133,10 @@ IDE agents (like Antigravity) act as the Architect but delegate heavy lifting to
 
 The delegation command:
 
-```bash
+```
 # Uses the model defined for the 'coder' role in your config
 bash ~/.claude/call_ollama.sh --role coder --prompt "implement X" --context-file /tmp/context.md
-```markdown
+```
 
 ## Project Onboarding
 
@@ -144,7 +144,7 @@ To use these orchestration rules in your project (so IDE agents like Antigravity
 
 1. **Copy the rules** from the system directory to your project root:
 
-   ```bash
+   ```
    cp ~/.claude/ai_rules.md ~/Projects/your-project/ai_rules.md
    ```
 
@@ -152,14 +152,13 @@ To use these orchestration rules in your project (so IDE agents like Antigravity
 
 3. **Check delegation**: Once added, your IDE agent should start using `call_ollama.sh` for heavy lifting instead of spending your cloud tokens.
 
-## Project Analysis (`analyze_project`)
-
+## Project Analysis 
 The system includes a sophisticated analysis tool that provides a deep understanding of any project's architecture.
 
-```bash
+```
 # Run from your project root
 analyze_project
-```markdown
+```
 
 ### How it works (Multi-Agent Tiered Analysis)
 
@@ -172,9 +171,9 @@ The findings are synthesized into a **Delta Report** (`.claude/context/analysis_
 
 ## Updating
 
-```bash
+```
 cd ~/Projects/ai-orchestrator
 git pull
-```markdown
+```
 
 Changes apply immediately — no reinstall needed.
