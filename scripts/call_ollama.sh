@@ -5,7 +5,17 @@ ROLE=""
 MODEL_OVERRIDE=""
 PROMPT=""
 CONTEXT_FILE=""
+# Find config: project-level first (walk up from $PWD), then global
+_DIR="$PWD"
 CONFIG_FILE="$HOME/.claude/llm-config.json"
+while [ "$_DIR" != "/" ]; do
+    if [ -f "$_DIR/llm-config.json" ]; then
+        CONFIG_FILE="$_DIR/llm-config.json"
+        break
+    fi
+    _DIR=$(dirname "$_DIR")
+done
+unset _DIR
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -31,7 +41,7 @@ if [ -z "$SELECTED_MODEL" ] || [ "$SELECTED_MODEL" == "null" ]; then
     case $ROLE in
         coder) SELECTED_MODEL="qwen2.5-coder:14b-instruct-q4_K_M" ;;
         reviewer) SELECTED_MODEL="qwen2.5-coder:7b" ;;
-        commit) SELECTED_MODEL="qwen2.5-coder:1.5b" ;;
+        commit) SELECTED_MODEL="qwen2.5-coder:7b" ;;
         *) SELECTED_MODEL="qwen2.5-coder:7b" ;;
     esac
 fi
@@ -73,6 +83,9 @@ jq -n \
     stream: false
   }' > "$TMP_PAYLOAD"
 
+# Measure prompt size before cleanup (1 token ≈ 4 chars)
+PROMPT_CHARS=$(wc -c < "$TMP_PROMPT" | tr -d ' ')
+
 # Call Ollama API
 RESPONSE=$(curl -s -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
@@ -81,5 +94,22 @@ RESPONSE=$(curl -s -X POST http://localhost:11434/api/chat \
 # Cleanup
 rm "$TMP_PROMPT" "$TMP_CONTEXT" "$TMP_PAYLOAD"
 
-# Extract and output message content
-echo "$RESPONSE" | jq -r '.message.content'
+# Extract response content
+RESPONSE_CONTENT=$(echo "$RESPONSE" | jq -r '.message.content')
+
+# Track token usage — best effort, never fail the script
+TRACK_SCRIPT="$HOME/.claude/track_savings.sh"
+if [ -f "$TRACK_SCRIPT" ]; then
+    RESPONSE_CHARS=$(echo "$RESPONSE_CONTENT" | wc -c | tr -d ' ')
+    INPUT_TOKENS_EST=$(( PROMPT_CHARS / 4 ))
+    OUTPUT_TOKENS_EST=$(( RESPONSE_CHARS / 4 ))
+    TASK_LABEL="${ROLE:-${SELECTED_MODEL}}"
+    bash "$TRACK_SCRIPT" \
+        --task "$TASK_LABEL" \
+        --input-tokens "$INPUT_TOKENS_EST" \
+        --output-tokens "$OUTPUT_TOKENS_EST" \
+        --files "0" > /dev/null 2>&1 || true
+fi
+
+# Output message content
+echo "$RESPONSE_CONTENT"
