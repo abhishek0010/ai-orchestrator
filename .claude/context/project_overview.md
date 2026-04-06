@@ -1,6 +1,6 @@
 # Project Overview
 
-_Last updated: 2026-04-05 by planner after task: add token savings tracking scripts and /stats slash command_
+_Last updated: 2026-04-06 by planner after task: add --input-tokens/--output-tokens to track_savings.sh and auto-track all call_ollama.sh calls_
 
 ## Language(s)
 - Shell (Bash): `install.sh`, `call_ollama.sh`, `local-commit.sh`, `analyze_project.sh` — pure Bash + `jq` for orchestration — standarts: inferred from existing scripts (no dedicated standarts file)
@@ -21,11 +21,11 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 | `agents/commit.md` | Commit agent — generates commit message via `call_ollama.sh` (role: commit), stages and commits |
 | `agents/doc-writer.md` | Documentation agent — reads git diff, drafts docs via `call_ollama.sh` (role: reviewer) |
 | `agents/test-agent.md` | Test agent — generates and runs tests via `call_ollama.sh` (role: coder) |
-| `scripts/call_ollama.sh` | Central LLM interface — handles prompt construction, context attachment, and raw API calls via `curl` |
+| `scripts/call_ollama.sh` | Central LLM interface — handles prompt construction, context attachment, raw API calls via `curl`, and auto-tracks every call via `track_savings.sh` |
 | `scripts/local-commit.sh` | Local commit helper — stages changes, generates commit message via Ollama, prompts for confirmation |
 | `scripts/open-pr.sh` | PR creation helper — generates PR title/body via Ollama, optionally creates via `gh` CLI |
 | `scripts/analyze_project.sh` | Project analyzer — multi-agent script that provides change discovery (delta reports) for the planner |
-| `scripts/track_savings.sh` | Token savings logger — reads context/output file sizes, estimates tokens and USD saved, appends to `~/.claude/token_stats.json` |
+| `scripts/track_savings.sh` | Token savings logger — accepts either context/output file paths OR direct `--input-tokens`/`--output-tokens` counts; estimates USD saved; appends to `~/.claude/token_stats.json` |
 | `scripts/stats.sh` | Savings summary printer — reads `~/.claude/token_stats.json`, filters by period (day/week/month/all), prints formatted summary |
 | `commands/implement.md` | `/implement` slash command — orchestrates the full planner → coder → build check → reviewer → fix loop → savings tracking pipeline |
 | `commands/review.md` | `/review` slash command — detects language, reads standarts, diffs HEAD, reports violations |
@@ -56,6 +56,8 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 - `settings.json.template` uses `__HOME__` as a placeholder; `install.sh` substitutes it with `$HOME` via `sed`
 - The planner agent checks for `project_overview.md` first (Phase 0 fast path) and skips full exploration if it exists
 - Token stats are persisted at `~/.claude/token_stats.json` with schema `{"runs": [...]}`
+- `track_savings.sh` supports two modes: (1) file-size mode using `--context-file`/`--output-file`, (2) direct mode using `--input-tokens`/`--output-tokens`; mode is auto-detected by whether both direct flags are present
+- `call_ollama.sh` auto-tracks every LLM call via `track_savings.sh` (best-effort, silent on failure); uses role name as the task label, falling back to model name if role is empty
 
 ## Do Not Touch
 
@@ -73,3 +75,4 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 - `doc-writer` uses `think=False` when calling `qwen3:8b` — do not remove this flag
 - `track_savings.sh` Step 5 in `/implement` is best-effort — skip silently if script not found (not yet installed)
 - Float arithmetic in bash scripts must use `jq -n` — bash `$(( ))` handles integers only
+- `call_ollama.sh` and `track_savings.sh` do NOT use `set -euo pipefail` — do not add it; callers depend on lenient error handling

@@ -5,6 +5,8 @@ FILES=""
 CONTEXT_FILE="$HOME/.claude/context/task_context.md"
 OUTPUT_FILE="$HOME/.claude/context/coder_output.md"
 STATS_FILE="$HOME/.claude/token_stats.json"
+INPUT_TOKENS_ARG=""
+OUTPUT_TOKENS_ARG=""
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -12,31 +14,38 @@ while [[ "$#" -gt 0 ]]; do
         --files) FILES="$2"; shift ;;
         --context-file) CONTEXT_FILE="$2"; shift ;;
         --output-file) OUTPUT_FILE="$2"; shift ;;
+        --input-tokens) INPUT_TOKENS_ARG="$2"; shift ;;
+        --output-tokens) OUTPUT_TOKENS_ARG="$2"; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
     shift
 done
 
 if [ -z "$TASK" ]; then
-    echo "Usage: $0 --task \"description\" --files \"file1 file2\""
+    echo "Usage: $0 --task \"description\" [--files \"file1 file2\"] [--input-tokens N --output-tokens N]"
     exit 1
 fi
 
 # Count bytes → tokens (1 token ≈ 4 chars)
-if [ -f "$CONTEXT_FILE" ]; then
-    INPUT_BYTES=$(wc -c < "$CONTEXT_FILE" | tr -d ' ')
+if [ -n "$INPUT_TOKENS_ARG" ] && [ -n "$OUTPUT_TOKENS_ARG" ]; then
+    INPUT_TOKENS="$INPUT_TOKENS_ARG"
+    OUTPUT_TOKENS="$OUTPUT_TOKENS_ARG"
 else
-    INPUT_BYTES=0
-fi
+    if [ -f "$CONTEXT_FILE" ]; then
+        INPUT_BYTES=$(wc -c < "$CONTEXT_FILE" | tr -d ' ')
+    else
+        INPUT_BYTES=0
+    fi
 
-if [ -f "$OUTPUT_FILE" ]; then
-    OUTPUT_BYTES=$(wc -c < "$OUTPUT_FILE" | tr -d ' ')
-else
-    OUTPUT_BYTES=0
-fi
+    if [ -f "$OUTPUT_FILE" ]; then
+        OUTPUT_BYTES=$(wc -c < "$OUTPUT_FILE" | tr -d ' ')
+    else
+        OUTPUT_BYTES=0
+    fi
 
-INPUT_TOKENS=$(( INPUT_BYTES / 4 ))
-OUTPUT_TOKENS=$(( OUTPUT_BYTES / 4 ))
+    INPUT_TOKENS=$(( INPUT_BYTES / 4 ))
+    OUTPUT_TOKENS=$(( OUTPUT_BYTES / 4 ))
+fi
 
 # Count files changed
 if [ -z "$FILES" ]; then
