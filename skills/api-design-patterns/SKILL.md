@@ -108,7 +108,7 @@ Use field selection (`fields` param) to reduce payload size. Prefix sort fields 
 
 Prefer URL path versioning for simplicity:
 
-```
+```text
 /api/v1/users
 /api/v2/users
 ```

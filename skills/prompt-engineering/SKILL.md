@@ -7,7 +7,7 @@ description: Prompt engineering patterns including structured prompts, chain-of-
 
 ## Structured System Prompt
 
-```
+```text
 You are a senior code reviewer. Your role is to analyze pull requests for:
 1. Correctness - logic errors, edge cases, off-by-one errors
 2. Security - injection, authentication, data exposure
@@ -27,7 +27,7 @@ Structure system prompts with role, scope, output format, and constraints. Be ex
 
 ## Chain-of-Thought
 
-```
+```text
 Analyze this database query for performance issues.
 
 Think step by step:
@@ -52,7 +52,7 @@ Chain-of-thought prompting improves accuracy on reasoning tasks by forcing the m
 
 ## Few-Shot Examples
 
-```
+```text
 Convert natural language to SQL. Follow these examples:
 
 Input: "How many orders were placed last month?"
@@ -101,7 +101,7 @@ Write tool descriptions that explain WHEN to use the tool, not just what it does
 
 ## Prompt Template Pattern
 
-```python
+````text
 def build_review_prompt(diff: str, context: str, rules: list[str]) -> str:
     rules_text = "\n".join(f"- {rule}" for rule in rules)
 
@@ -112,15 +112,13 @@ Context about the codebase:
 {context}
 
 Diff to review:
-```
-
+```diff
 {diff}
-
 ```
 
 Respond with a JSON array of findings. If no issues, return an empty array.
 Each finding: {{"severity": "critical|warning|info", "line": number, "message": "string", "suggestion": "string"}}"""
-```
+````
 
 ## Anti-Patterns
 
