@@ -1,6 +1,6 @@
 # AI Orchestrator — Professional Guide
 
-This document defines the orchestration pipeline, LLM roles, and trigger rules for this repository. General principles (humanizer, zero deps, English only) are located in `~/.claude/CLAUDE.md`.
+This file is read by Claude Code when working in this repo. It covers the orchestration pipeline, LLM roles, slash commands, and trigger rules. The project is structured as a collection of **Modular Claude Code Plugins** located in the [plugins/](../plugins/) directory.
 
 ## Orchestrator Roles
 
@@ -76,7 +76,8 @@ Loaded manually or via triggers for specific task domains.
 |:---|:---|
 | `/implement` | Full pipeline: Plan → Code → Build → Review |
 | `/review` | Audit current changes against language standards |
-| `/commit` | Generate commit message and stage changes |
+| `/commit` | Generate commit message (local LLM) and stage changes |
+| `/commit-push` | Local AI commit + Git push to remote |
 | `/debug` | Systematic RCA and minimal fix proposal |
 | `/stats` | View token savings (day/week/month) |
 
