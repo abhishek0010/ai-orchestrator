@@ -7,7 +7,6 @@
 
 Skills are markdown files in `skills/` (symlinked to `~/.claude/skills/`). Each file defines coding standards for one language. Agents load the relevant skill file before generating or reviewing code.
 
-
 Language detection happens by checking indicator files in the project root:
 
 | Skill file | Language | Indicator file |
