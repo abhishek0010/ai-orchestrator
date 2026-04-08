@@ -9,7 +9,7 @@ description: >
   paste a broken script without explanation. Also trigger for requests involving
   cron jobs, entrypoints, deploy scripts, migration scripts, or any .sh file.
 ---
- 
+
 # Bash Scripting Skill
 
 ## Phase 1: Understand Before Writing
@@ -32,13 +32,11 @@ If the user pastes a broken script, skip the interview and go straight to diagno
 Apply these to every script you write or review:
 
 ### Safety header (always include)
-
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 IFS=$'\n\t'
 ```
-
 - `set -e` — exit on error
 - `set -u` — treat unset variables as errors
 - `set -o pipefail` — catch errors in pipes
@@ -47,22 +45,20 @@ IFS=$'\n\t'
 **Exception**: Omit `set -e` only if the script intentionally continues on errors (document why).
 
 ### Variable hygiene
-
 ```bash
 # Always quote variables
 echo "$var"           # good
 echo $var             # bad — breaks on spaces/globs
- 
+
 # Use ${} for clarity in strings
 echo "${prefix}_suffix"
- 
+
 # Readonly constants
 readonly MAX_RETRIES=3
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ```
 
 ### Error handling patterns
-
 ```bash
 # Trap for cleanup
 cleanup() {
@@ -71,13 +67,13 @@ cleanup() {
   exit "$exit_code"
 }
 trap cleanup EXIT
- 
+
 # Explicit error messages
 die() {
   echo "ERROR: $*" >&2
   exit 1
 }
- 
+
 # Check required tools
 require() {
   command -v "$1" >/dev/null 2>&1 || die "Required tool not found: $1"
@@ -85,16 +81,13 @@ require() {
 ```
 
 ### Argument parsing
-
 For simple scripts use positional args with validation:
-
 ```bash
 [[ $# -lt 1 ]] && die "Usage: $(basename "$0") <arg1> [arg2]"
 ARG1="${1:?'arg1 is required'}"
 ```
 
 For complex scripts use `getopts`:
-
 ```bash
 while getopts ":f:o:vh" opt; do
   case $opt in
@@ -110,7 +103,6 @@ shift $((OPTIND - 1))
 ```
 
 ### Logging
-
 ```bash
 log()  { echo "[$(date '+%H:%M:%S')] $*"; }
 warn() { echo "[WARN]  $*" >&2; }
@@ -126,18 +118,18 @@ err()  { echo "[ERROR] $*" >&2; }
 ```bash
 # GitHub Actions: set outputs
 echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
- 
+
 # GitHub Actions: add to PATH
 echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
- 
+
 # GitHub Actions: group log output
 echo "::group::Build step"
 # ... commands ...
 echo "::endgroup::"
- 
+
 # GitHub Actions: mask secrets in logs
 echo "::add-mask::${SECRET_VALUE}"
- 
+
 # GitLab CI: section folding
 echo -e "section_start:$(date +%s):build\r\e[0KBuilding..."
 # ... commands ...
@@ -145,7 +137,6 @@ echo -e "section_end:$(date +%s):build\r\e[0K"
 ```
 
 **CI script checklist:**
-
 - Never hardcode secrets — use env vars
 - Always set `set -euo pipefail`
 - Exit with explicit codes for downstream steps
@@ -158,17 +149,17 @@ echo -e "section_end:$(date +%s):build\r\e[0K"
 # Safe temp files
 tmpfile=$(mktemp)
 trap 'rm -f "$tmpfile"' EXIT
- 
+
 # Process files safely (handles spaces in names)
 while IFS= read -r -d '' file; do
   process "$file"
 done < <(find . -name "*.txt" -print0)
- 
+
 # Read file line by line
 while IFS= read -r line; do
   echo "$line"
 done < input.txt
- 
+
 # Check file/dir existence
 [[ -f "$file" ]] || die "File not found: $file"
 [[ -d "$dir" ]]  || mkdir -p "$dir"
@@ -179,16 +170,15 @@ done < input.txt
 ```bash
 # Detect macOS
 [[ "$(uname)" == "Darwin" ]] || die "macOS only"
- 
+
 # Use gdate/gsed if GNU tools needed (via brew coreutils)
 require gdate
- 
+
 # macOS temp dir
 tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/myscript.XXXXXX")
 ```
 
 ### Retry logic (useful in CI)
-
 ```bash
 retry() {
   local max_attempts=${MAX_RETRIES:-3}
@@ -204,7 +194,7 @@ retry() {
     (( attempt++ ))
   done
 }
- 
+
 # Usage
 retry curl -f "https://example.com/api"
 ```
@@ -231,7 +221,6 @@ When reviewing an existing script, check in order:
 ## Phase 5: Output Format
 
 **For new scripts**: Write the complete script, then add a brief section:
-
 - What it does
 - How to run it (`chmod +x script.sh && ./script.sh <args>`)
 - Key assumptions / dependencies

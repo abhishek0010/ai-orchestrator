@@ -43,6 +43,7 @@ The planner and reviewer auto-detect the language from the changed files and loa
 | Flutter/Dart | [skills/flutter-code-standarts.md](../skills/flutter-code-standarts.md) |
 | Swift | [skills/swift-code-standarts.md](../skills/swift-code-standarts.md) |
 | C++ | [skills/c-code-standarts.md](../skills/c-code-standarts.md) |
+| Bash/Shell | [skills/bash-code-standarts.md](../skills/bash-code-standarts.md) |
 | Documentation | [skills/doc-standarts.md](../skills/doc-standarts.md) |
 
 ## Commands
