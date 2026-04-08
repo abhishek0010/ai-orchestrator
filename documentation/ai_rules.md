@@ -62,3 +62,12 @@ For all high-level planning and design tasks:
 2. **Delegate to Architect**: Use the local `architect` role for non-trivial design review or tech selection.
 3. **Challenge Analogy**: Reject solutions that rely solely on "industry standards" or "Netlfix does it". Insist on reasoning from fundamental project needs.
 4. **Minimalism**: Favor the simplest possible design that satisfies all ground truths.
+
+### 8. DevOps, Infrastructure & Automation
+
+For all infrastructure and automation tasks:
+
+1. **Automation Over Manual**: Load the relevant DevOps skills before proposing changes.
+2. **Delegate to DevOps**: Use the local `devops` role for CI/CD setup, cloud architecture, and containerization.
+3. **IaC and Security**: All infrastructure MUST be defined as code. Ensure proper IAM permissions and secret management are included in the proposal.
+4. **Resilience**: Always include health checks and deployment strategies (e.g., RollingUpdate) in Kubernetes and Cloud configurations.

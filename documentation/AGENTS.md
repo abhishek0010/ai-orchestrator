@@ -135,3 +135,13 @@ Evaluates designs, proposed refactors, and technology choices using fundamental 
 - **Ollama role**: `architect` (qwen2.5-coder:14b)
 
 The agent ALWAYS loads `skills/first-principles/SKILL.md`. It identifies the core job to be done, challenges all current assumptions, identifies ground truths, and builds up the recommended solution from those fundamentals. It is the primary agent for "Phase 1: Planning".
+
+## [devops](../agents/devops.md)
+
+Architects CI/CD pipelines, cloud infrastructure (AWS), and develops MCP servers.
+
+- **Triggered by**: user asks for "CI/CD", "deploy", "AWS", "Docker", "Kubernetes", or "MCP server"
+- **Claude model**: Sonnet (inherited)
+- **Ollama role**: `devops` (qwen2.5-coder:7b)
+
+The agent leverages specialized skills: `skills/ci-cd-pipelines/SKILL.md`, `skills/aws-cloud-patterns/SKILL.md`, and `skills/devops-automation/SKILL.md`. It is responsible for ensuring that all development is cloud-ready and properly automated.

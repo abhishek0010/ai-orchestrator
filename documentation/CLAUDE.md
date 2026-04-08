@@ -32,6 +32,7 @@ Roles are defined in `llm-config.json` at the project root or in `~/.claude/llm-
 | `commit` | `qwen2.5-coder:7b` | Commit messages and minor fixes |
 | `debugger` | `qwen2.5-coder:7b` | Root Cause Analysis and bug fixing |
 | `architect` | `hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS` | Architectural design & RCA |
+| `devops` | `qwen2.5-coder:7b` | CI/CD, Infrastructure & MCP |
 | `embedding` | `nomic-embed-text` | Semantic search and RAG |
 
 ## Language standards
@@ -50,6 +51,9 @@ The planner and reviewer auto-detect the language from the changed files and loa
 | Code Review | [skills/code-review/SKILL.md](../skills/code-review/SKILL.md) |
 | Root Cause Analysis | [skills/root-cause-analysis/SKILL.md](../skills/root-cause-analysis/SKILL.md) |
 | First Principles | [skills/first-principles/SKILL.md](../skills/first-principles/SKILL.md) |
+| DevOps / CI-CD | [skills/devops-automation/SKILL.md](../skills/devops-automation/SKILL.md) |
+| AWS Cloud | [skills/aws-cloud-patterns/SKILL.md](../skills/aws-cloud-patterns/SKILL.md) |
+| MCP | [skills/mcp-development/SKILL.md](../skills/mcp-development/SKILL.md) |
 
 ## Commands
 
@@ -68,6 +72,7 @@ These are not triggered automatically. Call them explicitly when needed.
 - `doc-writer` — update documentation (uses the `reviewer` role)
 - `debugger` — systematic root cause analysis (uses the `debugger` role)
 - `architect` — architectural review and first principles (uses the `architect` role)
+- `devops` — CI/CD, AWS and MCP development (uses the `devops` role)
 
 ## Trigger rules
 
@@ -79,6 +84,7 @@ BLOCKING REQUIREMENT: invoke the matching agent or skill before generating any o
 - User asks to write, create, or update documentation → run the `doc-writer` agent
 - User asks "could we do this better?", "is this the right approach?", or needs a refactor → run the `architect` agent
 - User shares an error log, stack trace, or asks "why did this happen" → run the `debugger` agent
+- User asks to "setup CI/CD", "deploy to AWS/cloud", or "write MCP server" → run the `devops` agent
 
 ## Core constraints
 

@@ -22,6 +22,10 @@ Language detection happens by checking indicator files in the project root:
 | [code-review/SKILL.md](../skills/code-review/SKILL.md) | Code Review | always available |
 | [root-cause-analysis/SKILL.md](../skills/root-cause-analysis/SKILL.md) | Root Cause Analysis | available on error/crash |
 | [first-principles/SKILL.md](../skills/first-principles/SKILL.md) | First Principles | available during planning |
+| [aws-cloud-patterns/SKILL.md](../skills/aws-cloud-patterns/SKILL.md) | AWS Cloud | available for infra tasks |
+| [ci-cd-pipelines/SKILL.md](../skills/ci-cd-pipelines/SKILL.md) | CI/CD Pipelines | available for automation |
+| [devops-automation/SKILL.md](../skills/devops-automation/SKILL.md) | DevOps Automation | available for automation |
+| [mcp-development/SKILL.md](../skills/mcp-development/SKILL.md) | MCP Development | available for MCP tasks |
 
 The planner reads the skill file once during Phase 1 and embeds the most relevant rules into `task_context.md`. The reviewer reads it directly before each review.
 
