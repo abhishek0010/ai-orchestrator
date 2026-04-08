@@ -58,7 +58,6 @@ Solution: Install a filter on the oil pump
 - Check the actual code, not just the description
 - Verify in the actual environment where the problem occurred
 
-
 ### Principle 2: Respect for People
 
 **Definition:** Problems are process problems, not people problems.

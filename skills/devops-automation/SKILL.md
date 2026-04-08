@@ -61,6 +61,7 @@ jobs:
 ```
 
 Key patterns:
+
 - Use `concurrency` to cancel outdated runs
 - Cache dependencies with setup action's `cache` option
 - Use `needs` for job dependencies
@@ -95,6 +96,7 @@ CMD ["node", "dist/server.js"]
 ```
 
 Rules:
+
 - Use specific image tags, never `latest`
 - Run as non-root user
 - Copy only necessary files into final stage
@@ -227,6 +229,7 @@ spec:
 ```
 
 GitOps principles:
+
 - Git is the single source of truth for cluster state
 - All changes go through PRs (no `kubectl apply` in production)
 - ArgoCD auto-syncs from Git to cluster
@@ -252,6 +255,7 @@ spec:
 ```
 
 Key metrics to expose:
+
 - `http_request_duration_seconds` (histogram) - request latency by route and status
 - `http_requests_total` (counter) - request count by route and status
 - `process_resident_memory_bytes` (gauge) - memory usage
