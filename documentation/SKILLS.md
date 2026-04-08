@@ -1,106 +1,83 @@
+# Skills Registry
 
-# Skills and Commands
+This document serves as a comprehensive index of all specialized skills available to the AI Orchestrator. Skills define coding standards, architectural patterns, and operational expertise.
 
-[README](../README.md) · [Architecture](ARCHITECTURE.md) · [Agents](AGENTS.md) · **Skills & Commands**
+## How Skills Work
 
-## Skills
+1. **Auto-detection**: For programming languages, skills are loaded automatically based on indicator files in the project root.
+2. **Contextual Loading**: For specialized tasks (e.g., "deploy", "optimize"), agents load the relevant skill manually or via trigger rules defined in [CLAUDE.md](CLAUDE.md).
+3. **Task Context**: The planner reads the required skill and embeds its core rules into the `task_context.md`.
 
-Skills are markdown files in `skills/` (symlinked to `~/.claude/skills/`). Each file defines coding standards for one language. Agents load the relevant skill file before generating or reviewing code.
+---
 
-Language detection happens by checking indicator files in the project root:
+## Programming Languages
 
-| Skill file | Language | Indicator file |
-|------------|----------|----------------|
-| [ts-code-standarts.md](../skills/ts-code-standarts.md) | TypeScript | `tsconfig.json` |
-| [python-code-standarts.md](../skills/python-code-standarts.md) | Python | `pyproject.toml` or `requirements.txt` |
-| [flutter-code-standarts.md](../skills/flutter-code-standarts.md) | Flutter/Dart | `pubspec.yaml` |
-| [swift-code-standarts.md](../skills/swift-code-standarts.md) | Swift | `Package.swift` or `*.xcodeproj` |
-| [c-code-standarts.md](../skills/c-code-standarts.md) | C++ | `CMakeLists.txt` or `*.cpp` files |
-| [bash-code-standarts.md](../skills/bash-code-standarts.md) | Bash/Shell | `*.sh` files or script content |
-| [doc-standarts.md](../skills/doc-standarts.md) | Documentation | always available |
-| [humanizer.md](../skills/humanizer.md) | Writing style — removes AI patterns | always available |
-| [code-review/SKILL.md](../skills/code-review/SKILL.md) | Code Review | always available |
-| [root-cause-analysis/SKILL.md](../skills/root-cause-analysis/SKILL.md) | Root Cause Analysis | available on error/crash |
-| [first-principles/SKILL.md](../skills/first-principles/SKILL.md) | First Principles | available during planning |
-| [aws-cloud-patterns/SKILL.md](../skills/aws-cloud-patterns/SKILL.md) | AWS Cloud | available for infra tasks |
-| [ci-cd-pipelines/SKILL.md](../skills/ci-cd-pipelines/SKILL.md) | CI/CD Pipelines | available for automation |
-| [devops-automation/SKILL.md](../skills/devops-automation/SKILL.md) | DevOps Automation | available for automation |
-| [mcp-development/SKILL.md](../skills/mcp-development/SKILL.md) | MCP Development | available for MCP tasks |
-| [git-advanced/SKILL.md](../skills/git-advanced/SKILL.md) | Advanced Git | available for git tasks |
-| [kubernetes-operations/SKILL.md](../skills/kubernetes-operations/SKILL.md) | K8s Operations | available for k8s tasks |
-| [microservices-design/SKILL.md](../skills/microservices-design/SKILL.md) | Microservices | available for design tasks |
-| [websocket-realtime/SKILL.md](../skills/websocket-realtime/SKILL.md) | Real-time / WebSockets | available for server tasks |
-| [security-hardening/SKILL.md](../skills/security-hardening/SKILL.md) | Security Hardening | available for all tasks |
-| [api-design-patterns/SKILL.md](../skills/api-design-patterns/SKILL.md) | API Design | available for design tasks |
-| [authentication-patterns/SKILL.md](../skills/authentication-patterns/SKILL.md) | Auth Patterns | available for security tasks |
-| [docker-best-practices/SKILL.md](../skills/docker-best-practices/SKILL.md) | Docker Best Practices | available for infra tasks |
-| [llm-integration/SKILL.md](../skills/llm-integration/SKILL.md) | LLM Integration | available for AI tasks |
-| [performance-optimization/SKILL.md](../skills/performance-optimization/SKILL.md) | Performance | available for all tasks |
-| [prompt-engineering/SKILL.md](../skills/prompt-engineering/SKILL.md) | Prompt Engineering | available for local LLM tasks |
+Standardized coding patterns and best practices for specific ecosystems.
 
-The planner reads the skill file once during Phase 1 and embeds the most relevant rules into `task_context.md`. The reviewer reads it directly before each review.
+| Indicator | Language | Standard File |
+|:---|:---|:---|
+| `tsconfig.json` | TypeScript | [ts-code-standarts.md](../skills/ts-code-standarts.md) |
+| `pyproject.toml` | Python | [python-code-standarts.md](../skills/python-code-standarts.md) |
+| `pubspec.yaml` | Flutter/Dart| [flutter-code-standarts.md](../skills/flutter-code-standarts.md) |
+| `Package.swift` | Swift | [swift-code-standarts.md](../skills/swift-code-standarts.md) |
+| `CMakeLists.txt`| C++ | [c-code-standarts.md](../skills/c-code-standarts.md) |
+| `*.sh` | Bash/Shell | [bash-code-standarts.md](../skills/bash-code-standarts.md) |
 
-If no indicator file is found, the `/standards` command lists all available skill files and asks the user to choose one.
+---
 
-## Commands
+## Engineering & Architecture
 
-Commands are markdown files in `commands/` (symlinked to `~/.claude/commands/`). Each file describes the behavior of a slash command in Claude Code. Type `/commandname` to invoke a command.
+Principles for designing robust, scalable, and maintainable systems.
 
-| Command | File | What it does |
-|---------|------|--------------|
-| `/implement` | `implement.md` | Runs the full planner → coder → build check → reviewer pipeline |
-| `/review` | `review.md` | Reviews current changes against the detected project language standards |
-| `/commit` | `commit.md` | Stages changes and generates a commit message via Ollama |
-| `/stats [day\|week\|month]` | `stats.md` | Shows token savings summary; calls `~/.claude/stats.sh` |
-| `/debug` | `debug.md` | Reads an error, traces the data flow, states root cause, proposes a minimal fix |
-| `/standards` | `standards.md` | Detects project language and displays the matching coding standards |
+| Skill | Description | Path |
+|:---|:---|:---|
+| **First Principles** | Reasoning from fundamental truths rather than analogies. | [first-principles](../skills/first-principles/SKILL.md) |
+| **Microservices** | Distributed system design, saga patterns, and service boundaries. | [microservices-design](../skills/microservices-design/SKILL.md) |
+| **API Design** | RESTful standards, resource naming, and OpenAPI specifications. | [api-design-patterns](../skills/api-design-patterns/SKILL.md) |
+| **Auth Patterns** | Secure implementation of JWT, OAuth2, and session management. | [authentication-patterns](../skills/authentication-patterns/SKILL.md) |
+| **WebSockets** | Real-time communication patterns (WS, Socket.io, SSE). | [websocket-realtime](../skills/websocket-realtime/SKILL.md) |
 
-### /implement
+---
 
-Runs the complete pipeline for a coding task. Spawns planner, then coder, then runs a build/type check, then spawns one reviewer per changed file in parallel. Repeats the coder + reviewer loop up to 3 times on NEEDS CHANGES. Calls `track_savings.sh` after a successful run.
+## DevOps & Infrastructure
 
-Skip this command for one-liner changes (rename, single import fix) — make the edit directly.
+Expertise in cloud environments, containerization, and automation.
 
-### /review
+| Skill | Description | Path |
+|:---|:---|:---|
+| **K8s Operations** | Cluster management, Helm charts, and manifest optimization. | [kubernetes-operations](../skills/kubernetes-operations/SKILL.md) |
+| **Docker Best Practices**| Multi-stage builds, image security, and optimization. | [docker-best-practices](../skills/docker-best-practices/SKILL.md) |
+| **AWS Cloud** | Cloud-native patterns, IAM, networking, and serverless. | [aws-cloud-patterns](../skills/aws-cloud-patterns/SKILL.md) |
+| **CI/CD Pipelines** | Automation workflows (GH Actions), caching, and strategies. | [ci-cd-pipelines](../skills/ci-cd-pipelines/SKILL.md) |
+| **DevOps Automation** | Infrastructure as Code and system automation methodology. | [devops-automation](../skills/devops-automation/SKILL.md) |
+| **MCP Development** | Model Context Protocol server design and transport. | [mcp-development](../skills/mcp-development/SKILL.md) |
 
-Gets `git diff HEAD`, loads the language standards for the detected project, and checks every changed line against each rule. Reports violations in this format:
+---
 
-```text
-[Rule section] short description
-File: <path>:<line>
-Issue: <what is wrong>
-Fix: <concrete fix>
-```
+## AI & Local Models
 
-Reports nothing if no violations are found.
+Mastery over LLM interactions and integration patterns.
 
-### /stats
+| Skill | Description | Path |
+|:---|:---|:---|
+| **Prompt Engineering** | System prompts, Chain-of-Thought, and few-shot learning. | [prompt-engineering](../skills/prompt-engineering/SKILL.md) |
+| **LLM Integration** | RAG pipelines, streaming, and tool-use orchestration. | [llm-integration](../skills/llm-integration/SKILL.md) |
+| **Humanizer** | Removes robotic patterns and ensures natural tone. | [humanizer](../skills/humanizer.md) |
 
-Calls `~/.claude/stats.sh` with an optional period argument and displays the token savings table.
+---
 
-```bash
-/stats day    # current calendar day
-/stats week   # last 7 days
-/stats month  # last 30 days
-/stats        # all-time totals
-```
+## Methodology & Utilities
 
-### /debug
+General-purpose expertise for debugging, Git, and performance.
 
-Reads the provided error or stack trace, locates the relevant source code, traces the data flow from inputs to the failure point, and outputs:
+| Skill | Description | Path |
+|:---|:---|:---|
+| **Root Cause Analysis**| Systematic 5-Whys methodology for deep debugging. | [root-cause-analysis](../skills/root-cause-analysis/SKILL.md) |
+| **Git Advanced** | Worktrees, bisect, recovery, and rebase strategies. | [git-advanced](../skills/git-advanced/SKILL.md) |
+| **Performance** | Web vitals, bundle analysis, and caching strategies. | [performance-optimization](../skills/performance-optimization/SKILL.md) |
+| **Code Review** | Methodology for rigorous and helpful peer reviews. | [code-review](../skills/code-review/SKILL.md) |
+| **Doc Standards** | Documentation quality and technical writing principles. | [doc-standarts](../skills/doc-standarts.md) |
 
-```text
-Root cause: <one sentence>
+---
 
-File: <path>:<line>
-Problem: <what is wrong>
-Fix: <concrete change>
-```
-
-No speculation — output is based only on what the code and error clearly show.
-
-### /standards
-
-Detects the project language from indicator files in the current working directory and displays the full contents of the matching skill file. Used to inspect the rules that planner and reviewer apply to this project.
-
-[README](../README.md) · [Architecture](ARCHITECTURE.md) · [Agents](AGENTS.md) · **Skills & Commands**
+[README](../README.md) · [Architecture](ARCHITECTURE.md) · [Agents](AGENTS.md) · [CLAUDE](CLAUDE.md)

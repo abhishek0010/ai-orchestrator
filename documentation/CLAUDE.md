@@ -1,111 +1,101 @@
-# AI Guide — Project-specific reference
+# AI Orchestrator — Professional Guide
 
-This file is read by Claude Code when working in this repo. It covers the orchestration pipeline, LLM roles, slash commands, and trigger rules. General principles (humanizer, doc standards, zero deps, English only) live in `~/.claude/CLAUDE.md` and are not repeated here.
+This document defines the orchestration pipeline, LLM roles, and trigger rules for this repository. General principles (humanizer, zero deps, English only) are located in `~/.claude/CLAUDE.md`.
 
-## Coding workflow
+## Orchestrator Roles
 
-For any non-trivial coding task, follow this pipeline:
+Roles are defined in [llm-config.json](../llm-config.json). Each role corresponds to a specialized agent instruction.
+
+| Role | Agent / Instruction | Responsibility |
+|:---|:---|:---|
+| **coder** | [agents/coder.md](../agents/coder.md) | Main code generation & implementation |
+| **reviewer** | [agents/reviewer.md](../agents/reviewer.md) | Code quality, standards & documentation |
+| **commit** | [agents/commit.md](../agents/commit.md) | Stage changes, PRs & commit messages |
+| **debugger** | [agents/debugger.md](../agents/debugger.md) | Root Cause Analysis (5-Whys) & bug fixing |
+| **architect** | [agents/architect.md](../agents/architect.md) | System design, refactoring & planning |
+| **devops** | [agents/devops.md](../agents/devops.md) | CI/CD, Infrastructure (AWS/K8s) & MCP |
+| **planner**| [agents/planner.md](../agents/planner.md) | Context gathering & implementation planning |
+
+---
+
+## Coding Pipeline
+
+For non-trivial tasks, use the `/implement` command:
 
 ```text
-/implement
-
-                                   ┌─ reviewer (file A) ─┐
-planner ──► coder ──► build/type ──┤─ reviewer (file B) ─├──► verdict / fix loop
-                      check        └─ reviewer (file C) ─┘
+                                       ┌─ reviewer (file A) ─┐
+planner ──► coder ──► build check ──┤─ reviewer (file B) ─├──► approved / fix loop
+                                       └─ reviewer (file C) ─┘
 ```
 
-| Step | Runner | LLM role | What it does |
-|------|--------|----------|--------------|
-| 1 — planner | Claude Sonnet (inherit) | — | Detects language, reads standards, explores codebase, writes context file |
-| 2 — coder | Claude Haiku | `coder` | Orchestrates; calls Ollama |
-| 2.5 — build | Claude Haiku | — | `tsc --noEmit` (TS) or equivalent |
-| 3 — reviewer ×N | Claude Haiku (parallel) | `reviewer` | Orchestrates; calls Ollama |
+1. **Planner**: Detects language, reads standards, and writes `task_context.md`.
+2. **Coder**: Orchestrates the implementation via local models.
+3. **Build Check**: Runs `tsc`, `py_compile`, or equivalent to catch syntax errors.
+4. **Reviewer**: Performs parallel review of every changed file against standards.
 
-## LLM roles
+---
 
-Roles are defined in `llm-config.json` at the project root or in `~/.claude/llm-config.json`.
+## Skill Registry
 
-| Role | Default model | Responsibility |
-|------|--------------|----------------|
-| `coder` | `hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS` | Main code generation |
-| `reviewer` | `qwen2.5-coder:7b` | Code review and documentation |
-| `commit` | `qwen2.5-coder:7b` | Commit messages and minor fixes |
-| `debugger` | `qwen2.5-coder:7b` | Root Cause Analysis and bug fixing |
-| `architect` | `hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS` | Architectural design & RCA |
-| `devops` | `qwen2.5-coder:7b` | CI/CD, Infrastructure & MCP |
-| `embedding` | `nomic-embed-text` | Semantic search and RAG |
+Skills define specialized standards and expert knowledge.
 
-## Language standards
+### Core Languages & Standards
 
-The planner and reviewer auto-detect the language from the changed files and load the matching standard:
+Detected automatically via indicator files in the project root.
 
-| Language | Standard file |
-|----------|---------------|
-| TypeScript | [skills/ts-code-standarts.md](../skills/ts-code-standarts.md) |
-| Python | [skills/python-code-standarts.md](../skills/python-code-standarts.md) |
-| Flutter/Dart | [skills/flutter-code-standarts.md](../skills/flutter-code-standarts.md) |
-| Swift | [skills/swift-code-standarts.md](../skills/swift-code-standarts.md) |
-| C++ | [skills/c-code-standarts.md](../skills/c-code-standarts.md) |
-| Bash/Shell | [skills/bash-code-standarts.md](../skills/bash-code-standarts.md) |
-| Documentation | [skills/doc-standarts.md](../skills/doc-standarts.md) |
-| Code Review | [skills/code-review/SKILL.md](../skills/code-review/SKILL.md) |
-| Root Cause Analysis | [skills/root-cause-analysis/SKILL.md](../skills/root-cause-analysis/SKILL.md) |
-| First Principles | [skills/first-principles/SKILL.md](../skills/first-principles/SKILL.md) |
-| DevOps / CI-CD | [skills/devops-automation/SKILL.md](../skills/devops-automation/SKILL.md) |
-| AWS Cloud | [skills/aws-cloud-patterns/SKILL.md](../skills/aws-cloud-patterns/SKILL.md) |
-| MCP | [skills/mcp-development/SKILL.md](../skills/mcp-development/SKILL.md) |
-| Advanced Git | [skills/git-advanced/SKILL.md](../skills/git-advanced/SKILL.md) |
-| Kubernetes Ops | [skills/kubernetes-operations/SKILL.md](../skills/kubernetes-operations/SKILL.md) |
-| Microservices | [skills/microservices-design/SKILL.md](../skills/microservices-design/SKILL.md) |
-| WebSockets / Real-time | [skills/websocket-realtime/SKILL.md](../skills/websocket-realtime/SKILL.md) |
-| Security Hardening | [skills/security-hardening/SKILL.md](../skills/security-hardening/SKILL.md) |
-| API Design | [skills/api-design-patterns/SKILL.md](../skills/api-design-patterns/SKILL.md) |
-| Auth Patterns | [skills/authentication-patterns/SKILL.md](../skills/authentication-patterns/SKILL.md) |
-| Docker Best Practices | [skills/docker-best-practices/SKILL.md](../skills/docker-best-practices/SKILL.md) |
-| LLM Integration | [skills/llm-integration/SKILL.md](../skills/llm-integration/SKILL.md) |
-| Performance | [skills/performance-optimization/SKILL.md](../skills/performance-optimization/SKILL.md) |
-| Prompt Engineering | [skills/prompt-engineering/SKILL.md](../skills/prompt-engineering/SKILL.md) |
+| Indicator | Language | Standard File |
+|:---|:---|:---|
+| `tsconfig.json` | TypeScript | [ts-code-standarts.md](../skills/ts-code-standarts.md) |
+| `pyproject.toml` | Python | [python-code-standarts.md](../skills/python-code-standarts.md) |
+| `pubspec.yaml` | Flutter/Dart| [flutter-code-standarts.md](../skills/flutter-code-standarts.md) |
+| `Package.swift` | Swift | [swift-code-standarts.md](../skills/swift-code-standarts.md) |
+| `CMakeLists.txt`| C++ | [c-code-standarts.md](../skills/c-code-standarts.md) |
+| `*.sh` | Bash/Shell | [bash-code-standarts.md](../skills/bash-code-standarts.md) |
+| — | Documentation | [doc-standarts.md](../skills/doc-standarts.md) |
 
-## Commands
+### Specialized Expertise
 
-| Command | When to use |
-|---------|-------------|
-| `/implement` | Full plan → code → build → review pipeline |
-| `/review` | Check current changes against language standards |
-| `/commit` | Stage and commit changes using the local LLM |
-| `/stats [day\|week\|month]` | Token savings summary (all time if no argument) |
+Loaded manually or via triggers for specific task domains.
 
-## Agents available on demand
+| Area | Skill File |
+|:---|:---|
+| **Architecture**| [microservices-design](../skills/microservices-design/SKILL.md) · [first-principles](../skills/first-principles/SKILL.md) · [api-design](../skills/api-design-patterns/SKILL.md) |
+| **Operations** | [kubernetes-ops](../skills/kubernetes-operations/SKILL.md) · [docker-best-practices](../skills/docker-best-practices/SKILL.md) · [aws-cloud](../skills/aws-cloud-patterns/SKILL.md) · [ci-cd](../skills/ci-cd-pipelines/SKILL.md) |
+| **Real-time** | [websocket-realtime](../skills/websocket-realtime/SKILL.md) |
+| **Security** | [security-hardening](../skills/security-hardening/SKILL.md) · [authentication-patterns](../skills/authentication-patterns/SKILL.md) |
+| **AI / LLM** | [llm-integration](../skills/llm-integration/SKILL.md) · [prompt-engineering](../skills/prompt-engineering/SKILL.md) |
+| **Expertise** | [root-cause-analysis](../skills/root-cause-analysis/SKILL.md) · [git-advanced](../skills/git-advanced/SKILL.md) · [performance](../skills/performance-optimization/SKILL.md) |
 
-These are not triggered automatically. Call them explicitly when needed.
+---
 
-- `test-agent` — write and run tests (uses the `coder` role)
-- `doc-writer` — update documentation (uses the `reviewer` role)
-- `debugger` — systematic root cause analysis (uses the `debugger` role)
-- `architect` — architectural review and first principles (uses the `architect` role)
-- `devops` — CI/CD, AWS and MCP development (uses the `devops` role)
+## Operational Rules
 
-## Trigger rules
+### Slash Commands
 
-BLOCKING REQUIREMENT: invoke the matching agent or skill before generating any other response.
+| Command | Usage |
+|:---|:---|
+| `/implement` | Full pipeline: Plan → Code → Build → Review |
+| `/review` | Audit current changes against language standards |
+| `/commit` | Generate commit message and stage changes |
+| `/debug` | Systematic RCA and minimal fix proposal |
+| `/stats` | View token savings (day/week/month) |
 
-- User says "commit" or "make a commit" → run the `commit` agent
-- User says "open pr", "create a pull request", or "open a pull request" → run the `commit` agent
-- User says "implement", "напиши код", or "добавь фичу" → run the `architect` agent for planning, then the `implement` skill
-- User asks to write, create, or update documentation → run the `doc-writer` agent
-- User asks "could we do this better?", "is this the right approach?", or needs a refactor → run the `architect` agent
-- User shares an error log, stack trace, or asks "why did this happen" → run the `debugger` agent
-- User asks to "setup CI/CD", "deploy to AWS/cloud", or "write MCP server" → run the `devops` agent
-- User asks about "microservices", "event-driven", "saga pattern", or "k8s/helm" → run the `architect` or `devops` agent
-- User says "websocket", "socket.io", or "real-time" → run the `architect` agent
-- User asks about "API design", "REST standards", or "OpenAPI/Swagger" → run the `architect` or `reviewer` agent
-- User asks to "optimize performance", "fix web vitals", or "analyze bundle" → run the `architect` or `reviewer` agent
-- User asks about "Docker optimization", "Dockerfile security", or "Compose best practices" → run the `devops` agent
-- User asks to "integrate LLM", "build RAG", "improve prompst", or "setup function calling" → run the `architect` agent
+### Trigger Rules
 
-## Core constraints
+BLOCKING: Invoke the matching agent/skill before responding.
 
-- NEVER edit core orchestration scripts directly — use the `coder` agent for `.sh` files.
-- NEVER use `doc-writer` for shell scripts or `coder` for markdown files.
-- NEVER add Python dependencies to the core logic.
-- ALWAYS use `jq` for JSON processing.
+- **Infrastructure**: "setup CI/CD", "deploy", "k8s", "docker" → [devops](../agents/devops.md)
+- **High Level**: "refactor", "approach?", "microservices" → [architect](../agents/architect.md)
+- **Troubleshoot**: "error log", "why?", "fix this" → [debugger](../agents/debugger.md)
+- **Git/PR**: "commit", "push", "open pr" → [commit](../agents/commit.md)
+- **Docs**: "update readme", "write docs" → [doc-writer](../agents/doc-writer.md)
+- **Testing**: "write tests", "run coverage" → [test-agent](../agents/test-agent.md)
+
+---
+
+## Core Constraints
+
+- **No direct edits**: Never edit core `.sh` scripts directly; use the `coder` agent.
+- **Zero dependencies**: Never add Python/Node dependencies to the core orchestrator.
+- **JSON handling**: ALWAYS use `jq` for JSON processing in shell scripts.
+- **Separation**: Never use `doc-writer` for code or `coder` for markdown.
