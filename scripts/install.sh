@@ -34,6 +34,7 @@ SYMLINK_TARGETS=(
   "scripts/analyze_project.sh"
   "scripts/track_savings.sh"
   "scripts/stats.sh"
+  "scripts/check-update.sh"
 )
 
 echo "Installing ai-orchestrator from: $REPO_DIR"
@@ -178,9 +179,13 @@ HOOK
     chmod +x "$HOOKS_DIR/pre-commit"
     echo "  ✓ pre-commit hook (git-cliff changelog)"
 
-    # commit-msg: commitlint (skip if not installed locally)
+    # commit-msg: commitlint (skip if not installed locally, skip merge commits)
     cat > "$HOOKS_DIR/commit-msg" <<'HOOK'
 #!/bin/sh
+# Skip merge commits — they never follow Conventional Commits format
+if [ -f .git/MERGE_HEAD ]; then
+  exit 0
+fi
 if ! command -v npx >/dev/null 2>&1; then
   exit 0
 fi
@@ -197,7 +202,27 @@ npx --no-install commitlint --edit "$1" || {
 }
 HOOK
     chmod +x "$HOOKS_DIR/commit-msg"
-    echo "  ✓ commit-msg hook (commitlint)"
+    echo "  ✓ commit-msg hook (commitlint, skips merge commits)"
+
+    # post-merge: regenerate CHANGELOG.md after any merge (safety net)
+    cat > "$HOOKS_DIR/post-merge" <<'HOOK'
+#!/bin/sh
+# Update CHANGELOG after merge — the merge commit itself is filtered out
+# by git-cliff (filter_unconventional = true), so only real commits appear.
+if ! command -v git-cliff >/dev/null 2>&1; then
+  exit 0
+fi
+if [ ! -f cliff.toml ]; then
+  exit 0
+fi
+git-cliff --config cliff.toml -o CHANGELOG.md 2>/dev/null
+if ! git diff --quiet CHANGELOG.md 2>/dev/null; then
+  git add CHANGELOG.md
+  git commit -m "chore: sync changelog after merge" --no-verify
+fi
+HOOK
+    chmod +x "$HOOKS_DIR/post-merge"
+    echo "  ✓ post-merge hook (git-cliff changelog sync)"
 fi
 
 echo ""
@@ -211,3 +236,4 @@ echo ""
 echo "Setup complete! To use orchestrator rules in your project, copy ~/.claude/ai_rules.md to your project root."
 echo "Example: cp ~/.claude/ai_rules.md ~/Projects/my-app/ai_rules.md"
 echo ""
+bash "$REPO_DIR/scripts/check-update.sh"

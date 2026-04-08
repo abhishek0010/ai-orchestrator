@@ -29,6 +29,16 @@ bash ~/.claude/open-pr.sh
 
 The script checks for uncommitted changes (and offers to commit first), generates a PR title and description via Ollama, previews the output, and optionally creates the PR via the `gh` CLI if available.
 
+## Merge commits
+
+When the user runs a commit during an active `git merge` (`.git/MERGE_HEAD` exists), the script detects this automatically and:
+
+- Skips Ollama — merge messages are not AI-generated
+- Uses the existing merge message from `.git/MERGE_MSG` as-is
+- After committing, runs `git-cliff` to sync `CHANGELOG.md` (the merge commit itself is filtered out via `filter_unconventional = true`)
+
+If the user asks to commit after `git merge main` or similar, just run the script — it handles the merge path without any extra input from you.
+
 ## Rules
 
 - Never call `git add`, `git commit`, or `gh pr create` directly — the scripts handle this
