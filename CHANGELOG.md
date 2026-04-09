@@ -1,10 +1,8 @@
 # Changelog
 
 All notable changes to ai-orchestrator.
-## [unreleased]
+## v1.0.9 — 2026-04-09
 ### 2026-04-09
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`707ceba`](https://github.com/Mybono/ai-orchestrator/commit/707ceba341ee05e10bd50e5f16876b48f20984b9) Update lint error handling and improve script flow
-- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`eb44482`](https://github.com/Mybono/ai-orchestrator/commit/eb4448219ac6d9a06278d021843b7dd0e6d5e76a) Add proactive markdown review for staged files
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`d320c26`](https://github.com/Mybono/ai-orchestrator/commit/d320c26b3da3d221c1582247f4c6a4b6a47b847e) Sync changelog after merge
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`24aff28`](https://github.com/Mybono/ai-orchestrator/commit/24aff28d717f270bb6b7feb02d53099f428a01f6) Auto-fix markdown lint errors
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`763e650`](https://github.com/Mybono/ai-orchestrator/commit/763e650fd153cff14be5bdd4c06bc00364515b76) Bump version to 1.0.7
