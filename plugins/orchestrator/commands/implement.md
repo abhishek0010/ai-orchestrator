@@ -2,6 +2,28 @@ Run the full plan → code → review pipeline for a coding task.
 
 ## Pipeline
 
+### Step 0 — Context Budget
+
+Before loading anything, apply [context-manager](../../../agents/context-manager.md) rules:
+
+**Load:**
+- Files directly related to the task and their immediate dependencies.
+- Test files corresponding to modified code.
+- Type definitions and interfaces referenced by the task.
+- Relevant config files (`tsconfig.json`, `pyproject.toml`, `package.json`).
+
+**Never load:**
+- `node_modules/`, `vendor/`, `target/`, `dist/`, `build/` directories.
+- Lock files (`package-lock.json`, `yarn.lock`, `Cargo.lock`, `poetry.lock`).
+- Generated code (protobuf output, GraphQL codegen, OpenAPI clients).
+- Binary files, images, fonts, large data fixtures.
+
+Allocate context budget:
+- **40% Critical** — files being modified, active errors, task requirements.
+- **30% Important** — related files, types, tests for changed code.
+- **20% Reference** — architecture docs, API specs, config files.
+- **10% Reserve** — buffer for unexpected context needs.
+
 ### Step 1 — Plan
 
 Spawn the `planner` agent with the user's task description.
@@ -39,9 +61,11 @@ If mypy is not installed, fall back to `python -m py_compile <file>` for each ch
 
 If the build/type check **fails**:
 
-- Treat it as NEEDS CHANGES (same as reviewer verdict)
-- Pass the full error output to the coder in the fix loop (Step 4)
-- Do NOT proceed to reviewer until the build passes
+- Classify the error using [error-coordinator](../../../agents/error-coordinator.md) rules:
+  - **Transient** (flaky env, missing dep): retry once before entering fix loop.
+  - **Permanent** (type error, syntax error): go directly to fix loop.
+- Pass the full error output to the coder in the fix loop (Step 4).
+- Do NOT proceed to reviewer until the build passes.
 
 ### Step 3 — Review (parallel if multiple files)
 
@@ -53,7 +77,18 @@ Overall verdict is **NEEDS CHANGES** if any single file reviewer returns NEEDS C
 
 ### Step 4 — Fix loop (if needed)
 
-If the reviewer returns **NEEDS CHANGES** or the build step fails:
+If the reviewer returns **NEEDS CHANGES** or the build step fails, apply [error-coordinator](../../../agents/error-coordinator.md) recovery strategy:
+
+**Error classification before retrying:**
+
+| Error type | Strategy |
+|---|---|
+| Syntax / type error (permanent) | Fix immediately, no delay |
+| Build tool failure (transient) | Retry once, then fix loop |
+| Reviewer logic issue (degraded) | Fix loop with full diff context |
+| Same error repeats 2+ times | Escalate to user — do not burn more tokens |
+
+**Fix loop steps:**
 
 1. Capture a diff of what the coder changed in this round:
 
@@ -62,17 +97,21 @@ If the reviewer returns **NEEDS CHANGES** or the build step fails:
    ```
 
 2. Spawn the `coder` agent again, passing:
-   - The reviewer's issues (or build error output)
-   - The full `git diff` from step 1 — so coder sees what was already attempted and doesn't repeat the same mistake
-3. Re-run Step 2.5 (build check)
-4. Then spawn the `reviewer` agent again
-5. Repeat at most **3 times** — if still failing after 3 rounds, stop and report the remaining issues to the user
+   - The reviewer's issues (or build error output).
+   - The full `git diff` — so coder sees what was already attempted and doesn't repeat the same mistake.
+3. Re-run Step 2.5 (build check).
+4. Spawn the `reviewer` agent again.
+5. Repeat at most **3 times**.
+
+**Circuit breaker:** If the same error appears in 2 consecutive rounds without change — stop immediately and report to the user. Do not attempt a 3rd retry on an identical error.
+
+After 3 rounds with remaining issues: stop and report clearly what failed and why.
 
 ### Step 5 — Track savings
 
 After the pipeline completes successfully (reviewer returns APPROVED or no NEEDS CHANGES after fix loop):
 
-1. Collect the list of changed files from `git diff --name-only HEAD` or from what the coder reported
+1. Collect the list of changed files from `git diff --name-only HEAD` or from what the coder reported.
 2. Run:
 
    ```bash
@@ -92,6 +131,6 @@ If the user's request is clearly a one-liner (rename, import fix, single value c
 
 When the pipeline completes:
 
-- List every file that was changed
-- Show the reviewer's final verdict
-- If issues remain after 2 fix rounds, list them clearly so the user can decide next steps
+- List every file that was changed.
+- Show the reviewer's final verdict.
+- If issues remain after 2 fix rounds, list them clearly so the user can decide next steps.

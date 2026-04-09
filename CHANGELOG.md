@@ -3,7 +3,8 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-04-09
-- ![docs](https://img.shields.io/badge/docs-0075ca?style=flat-square) [`41c6f3d`](https://github.com/Mybono/ai-orchestrator/commit/41c6f3d209d0b055e9dd413c719d684594081478) Add detailed agent documentation for context-manager, error-coordinator, performance-monitor, and security-auditor
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`4f41acd`](https://github.com/Mybono/ai-orchestrator/commit/4f41acd96ae203ff60a20ffc4eeb3594c7b42a94) Add context budget and improve error handling
+- ![docs](https://img.shields.io/badge/docs-0075ca?style=flat-square) [`421f7b8`](https://github.com/Mybono/ai-orchestrator/commit/421f7b84d135fc44d7cc9f5d04fcbdc35a7e6f1a) Add detailed agent documentation for context-manager, error-coordinator, performance-monitor, and security-auditor
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`230c325`](https://github.com/Mybono/ai-orchestrator/commit/230c325f4aa12fe161ed1531d71281f111d67e02) Sync changelog after merge
 - ![docs](https://img.shields.io/badge/docs-0075ca?style=flat-square) [`1df6ec1`](https://github.com/Mybono/ai-orchestrator/commit/1df6ec147844a9f5eb72995dd793df646642dfa3) Add CODE_OF_CONDUCT.md (#27)
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`7c19e7e`](https://github.com/Mybono/ai-orchestrator/commit/7c19e7eb6b65a4736834f5ecfe1c7606b4203cb6) Sync changelog after merge
