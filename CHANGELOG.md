@@ -1,14 +1,6 @@
 # Changelog
 
 All notable changes to ai-orchestrator.
-## [unreleased]
-### 2026-04-09
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`4c09488`](https://github.com/Mybono/ai-orchestrator/commit/4c09488e3b55d2d626edf754672c89d9b4bf73cc) Update bot terminology from "Bot" to "Agent"
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`c0259e8`](https://github.com/Mybono/ai-orchestrator/commit/c0259e89fbad875ca7e0a75aff5bd52c0dc1eca5) Add CI integration and self-healing CI for automated debugging
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`72996d4`](https://github.com/Mybono/ai-orchestrator/commit/72996d4afef9aa2a444cf0682a8c319b88089b3a) Add devops review support
-- ![docs](https://img.shields.io/badge/docs-0075ca?style=flat-square) [`105d20c`](https://github.com/Mybono/ai-orchestrator/commit/105d20cb44454fbec0665f21b8955ceb1fe2e378) Add local use and mentorship section for Architect agent
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`044b74c`](https://github.com/Mybono/ai-orchestrator/commit/044b74cb6219ea08f55c9d6af05ccd622c679cd3) Update security audit and test coverage checks
-
 ## v1.0.6 — 2026-04-09
 ### 2026-04-09
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`3ee5975`](https://github.com/Mybono/ai-orchestrator/commit/3ee5975a787e7023cb861d7a9cb53fe38ad81e27) Auto-fix markdown lint errors
@@ -22,6 +14,9 @@ All notable changes to ai-orchestrator.
 ## v1.0.4 — 2026-04-08
 ### 2026-04-08
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`1636d77`](https://github.com/Mybono/ai-orchestrator/commit/1636d7775ad015908f43327298b9b2695150231d) Sync changelog after merge
+
+## v1.0.3 — 2026-04-08
+### 2026-04-08
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`e423463`](https://github.com/Mybono/ai-orchestrator/commit/e4234634f50f8b2fb981bf55e5c118cda00af11e) Auto-fix markdown lint errors
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`cb03846`](https://github.com/Mybono/ai-orchestrator/commit/cb038461ed460de9cce5c329fdfbd6f3fb146978) Add specialized plugin detection and documentation updates
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`a0ed7ed`](https://github.com/Mybono/ai-orchestrator/commit/a0ed7ed47109bdd28e9faad5870a09bf8279f5b5) Add new plugins for API design, Docker optimization, Kubernetes management, and security guidance
