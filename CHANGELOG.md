@@ -3,7 +3,7 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-04-09
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`f534d35`](https://github.com/Mybono/ai-orchestrator/commit/f534d354e3da38473ca5a6e92ecd29133e66773c) Add support for Bitbucket review functionality
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`cc30b27`](https://github.com/Mybono/ai-orchestrator/commit/cc30b27283186ba974c7b6a231c4212672f96bf4) Add support for Bitbucket review functionality
 ### 2026-04-08
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`4a2d5df`](https://github.com/Mybono/ai-orchestrator/commit/4a2d5df33e0a7fa9bedbc05ea77cd0d41a8049c0) Sync changelog after merge
 
