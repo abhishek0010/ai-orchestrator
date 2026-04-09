@@ -21,6 +21,7 @@ wc -l .claude/context/task_context.md .claude/context/coder_output.md 2>/dev/nul
 ```
 
 Report:
+
 - Which agent consumed the most tokens in the last run.
 - Whether the prompt-to-output ratio is healthy (warn if < 0.1 — too much context loaded).
 - How many fix-loop iterations the last `/implement` needed (0 = optimal, 3 = investigate).

@@ -5,6 +5,7 @@ Run the full plan → code → review pipeline for a coding task.
 ### Step 0 — Triage
 
 Run [triage](./triage.md) first. It writes `.claude/context/triage.md` with:
+
 - Complexity tier (nano / micro / standard / complex)
 - Detected domains (api, security, docker, etc.)
 - Route decision
@@ -28,6 +29,7 @@ For `full-pipeline` and `architect-first`: read `.claude/context/triage.md` and 
 ### Step 1 — Plan
 
 Spawn the `planner` agent with:
+
 - The user's task description.
 - The full content of `.claude/context/triage.md` — so the planner knows which domains, skills, and constraints apply.
 
@@ -38,12 +40,14 @@ Wait for it to complete before proceeding.
 **Context budget** — per [context-manager](../../../agents/context-manager.md):
 
 Load:
+
 - Files directly related to the task and their immediate dependencies.
 - Test files for modified code.
 - Type definitions and interfaces referenced by the task.
 - Relevant config files (`tsconfig.json`, `pyproject.toml`, `package.json`).
 
 Never load:
+
 - `node_modules/`, `vendor/`, `target/`, `dist/`, `build/`.
 - Lock files (`package-lock.json`, `yarn.lock`, `Cargo.lock`, `poetry.lock`).
 - Generated code, binary files, images, large data fixtures.
@@ -55,11 +59,13 @@ Budget: **40% critical** / **30% important** / **20% reference** / **10% reserve
 Before coding starts, spawn the `reviewer` agent with **only** `.claude/context/task_context.md` (not code — it doesn't exist yet).
 
 The reviewer checks:
+
 - Is the approach architecturally sound?
 - Does the plan respect the domain constraints from triage?
 - Are there design-level security or performance issues?
 
 **Verdict:**
+
 - `APPROACH APPROVED` → proceed to Step 2.
 - `APPROACH REJECTED` → return to planner with reviewer's objections. Planner rewrites the plan. Re-run Step 1.5 once. If still rejected, report to user and stop.
 
@@ -77,20 +83,25 @@ Wait for it to complete before proceeding.
 Detect the project type and run the appropriate check:
 
 **TypeScript** (if `tsconfig.json` exists):
+
 ```bash
 npx tsc --noEmit
 ```
+
 Fallback: `npm run build` or `npm run typecheck`.
 
 **Python** (if `pyproject.toml` or `setup.py` exists):
+
 ```bash
 python -m mypy <changed_files> --ignore-missing-imports
 ```
+
 Fallback: `python -m py_compile <file>` per changed file. Do NOT run pytest here.
 
 **Other projects**: skip this step.
 
 If build/type check **fails** — classify per [error-coordinator](../../../agents/error-coordinator.md):
+
 - **Transient** (flaky env, missing dep): retry once, then fix loop.
 - **Permanent** (type error, syntax error): fix loop immediately.
 
@@ -134,9 +145,11 @@ Apply [error-coordinator](../../../agents/error-coordinator.md) recovery:
 
 1. Collect changed files: `git diff --name-only HEAD`
 2. Track savings:
+
    ```bash
    bash ~/.claude/track_savings.sh --task "<task description>" --files "<changed files>"
    ```
+
    Best-effort — skip silently if not found.
 
 ## When to skip the full pipeline
