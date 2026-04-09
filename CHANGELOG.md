@@ -3,7 +3,8 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-04-09
-- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`3a51968`](https://github.com/Mybono/ai-orchestrator/commit/3a51968ae9a682bb434fa075b4817f16c6f67db4) Add initial API authentication using JWT
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`2db041b`](https://github.com/Mybono/ai-orchestrator/commit/2db041bc7dd77a59288a84d4818546b869578410) Introduce plugin-route for specific tasks and refine route logic
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`3efdd8a`](https://github.com/Mybono/ai-orchestrator/commit/3efdd8a718f9089b108e8e82f7a3a7bb9f1ddcae) Add initial API authentication using JWT
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`189be7b`](https://github.com/Mybono/ai-orchestrator/commit/189be7bd17e94e0cdef26eb0c40a187302f62344) Add context budget and improve error handling
 - ![docs](https://img.shields.io/badge/docs-0075ca?style=flat-square) [`421f7b8`](https://github.com/Mybono/ai-orchestrator/commit/421f7b84d135fc44d7cc9f5d04fcbdc35a7e6f1a) Add detailed agent documentation for context-manager, error-coordinator, performance-monitor, and security-auditor
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`230c325`](https://github.com/Mybono/ai-orchestrator/commit/230c325f4aa12fe161ed1531d71281f111d67e02) Sync changelog after merge

@@ -17,8 +17,11 @@ Run [triage](./triage.md) first. It writes `.claude/context/triage.md` with:
 |---|---|
 | `direct-edit` | Make the edit immediately. Stop here. |
 | `quick-coder` | Spawn `quick-coder` only → build check. Stop here. |
-| `full-pipeline` | Continue to Step 1 below. |
+| `plugin-route` | **Skip planner.** Use plugin file as plan → Step 2 (coder) → Step 2.5 (build) → Step 3 (review). |
+| `full-pipeline` | Continue to Step 1 (planner) below. |
 | `architect-first` | Spawn `architect` agent → wait for approval → continue to Step 1. |
+
+For `plugin-route`: read `## Plugin Plan` from `.claude/context/triage.md` to get the plugin command file path. Load that file as the task plan. Pass it directly to the `coder` agent along with `## Constraints` from triage. Skip Step 1 and Step 1.5 entirely — the plugin file already defines what to do and how.
 
 For `full-pipeline` and `architect-first`: read `.claude/context/triage.md` and keep it in context for all subsequent steps.
 
