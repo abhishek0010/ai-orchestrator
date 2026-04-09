@@ -19,17 +19,20 @@ Scan the task description for domain keywords. A task may match **multiple domai
 
 | Domain | Keywords | Skills to load | Agents to load | Plugin command |
 |---|---|---|---|---|
-| `api` | api, endpoint, rest, graphql, route, openapi, swagger, http method | `skills/api-design-patterns/SKILL.md` | `agents/architect.md` | `plugins/api-architect/commands/design-api.md` |
+| `api` | api, endpoint, rest, graphql, route, openapi, swagger, http method, integration test | `skills/api-design-patterns/SKILL.md` | `agents/architect.md`, `agents/api-tester.md` | `plugins/api-architect/commands/design-api.md` |
 | `docker` | docker, image, dockerfile, container, compose, registry | `skills/docker-best-practices/SKILL.md` | `agents/devops.md` | `plugins/docker-helper/commands/optimize-dockerfile.md` |
-| `ci_cd` | ci/cd, pipeline, deploy, release, github actions, k8s, kubernetes, helm, argocd | `skills/ci-cd-pipelines/SKILL.md`, `skills/kubernetes-operations/SKILL.md` | `agents/devops.md` | `plugins/k8s-helper/commands/generate-manifest.md` |
+| `ci_cd` | ci/cd, github actions, workflow, k8s, kubernetes, helm, argocd, deploy, deployment | `skills/ci-cd-pipelines/SKILL.md`, `skills/kubernetes-operations/SKILL.md` | `agents/devops.md` | `plugins/k8s-helper/commands/generate-manifest.md` |
+| `release` | release, version bump, semver, changelog, publish, tag, npm publish, pypi | `skills/git-advanced/SKILL.md` | `agents/devops.md` | `plugins/release-manager/commands/release.md` |
 | `security` | security, auth, jwt, oauth, vulnerability, owasp, injection, xss, csrf, secrets | `skills/security-hardening/SKILL.md`, `skills/authentication-patterns/SKILL.md` | `agents/security-auditor.md`, `agents/reviewer.md` | `plugins/security-guidance/commands/security-check.md` |
 | `database` | schema, sql, query, migration, erd, database, postgres, mysql, mongo, index | `skills/microservices-design/SKILL.md` | `agents/architect.md` | `plugins/database-tools/commands/design-schema.md` |
-| `testing` | test, unit test, e2e, playwright, coverage, mock, fixture, spec | — | `agents/unit-tester.md`, `agents/qa-orchestrator.md` | `plugins/qa-tools/commands/generate-tests.md` |
+| `testing` | test, unit test, e2e, playwright, coverage, mock, fixture, spec, jest, pytest | — | `agents/unit-tester.md`, `agents/test-agent.md`, `agents/qa-orchestrator.md` | `plugins/qa-tools/commands/generate-tests.md` |
+| `accessibility` | aria, a11y, wcag, screen reader, keyboard nav, focus, contrast, axe, lighthouse | — | `agents/ui-tester.md` | `plugins/accessibility/commands/fix-aria.md` |
+| `bug` | bug, error, crash, exception, stack trace, fix, broken, failing, unexpected behavior | — | `agents/debugger.md` | `plugins/debugger/commands/debug.md` |
 | `refactor` | refactor, simplify, extract, clean, complexity, duplication, technical debt | `skills/first-principles/SKILL.md` | `agents/architect.md` | `plugins/refactor-engine/commands/simplify.md` |
 | `python` | python, pep, type hints, mypy, pydantic, fastapi, django, flask | `skills/python-code-standarts.md` | — | `plugins/python-expert/commands/refactor-py.md` |
-| `ai_llm` | prompt, llm, embedding, rag, ai, openai, anthropic, langchain, vector | `skills/llm-integration/SKILL.md`, `skills/prompt-engineering/SKILL.md` | — | `plugins/ai-engineering/commands/optimize-prompt.md` |
+| `ai_llm` | prompt, llm, embedding, rag, openai, anthropic, langchain, vector, claude | `skills/llm-integration/SKILL.md`, `skills/prompt-engineering/SKILL.md` | — | `plugins/ai-engineering/commands/optimize-prompt.md` |
 | `docs` | readme, documentation, docs, changelog, contributing | `skills/doc-standarts.md` | `agents/doc-writer.md` | `plugins/documentation/commands/generate-readme.md` |
-| `performance` | performance, slow, optimize, cache, bundle, latency, memory leak, profil | `skills/performance-optimization/SKILL.md` | `agents/architect.md` | `plugins/database-tools/commands/optimize-query.md` |
+| `performance` | performance, slow, optimize, cache, bundle, latency, memory leak, profiling | `skills/performance-optimization/SKILL.md` | `agents/architect.md` | `plugins/database-tools/commands/optimize-query.md` |
 
 If no domain matches → treat as `standard` complexity, no extra skills loaded.
 
@@ -52,9 +55,13 @@ Use `plugin-route` when **all three** are true:
 | "Design the REST API schema" | `api` | `design-api.md` | `plugin-route` |
 | "Generate tests for UserService" | `testing` | `generate-tests.md` | `plugin-route` |
 | "Refactor the auth module" | `refactor` | `simplify.md` | `plugin-route` |
+| "Fix ARIA labels on the form" | `accessibility` | `fix-aria.md` | `plugin-route` |
+| "Debug this crash / stack trace" | `bug` | `debug.md` | `plugin-route` |
+| "Bump version and cut a release" | `release` | `release.md` | `plugin-route` |
 | "Add JWT auth to the API" | `api` + `security` | — | `full-pipeline` (2 domains) |
 | "Deploy the API to k8s with security hardening" | `ci_cd` + `security` | — | `full-pipeline` (2 domains) |
 | "Add rate limiting and update the OpenAPI spec" | `api` | — | `full-pipeline` (multi-intent) |
+| "Fix the bug and add tests" | `bug` + `testing` | — | `full-pipeline` (2 domains) |
 
 ### Route table
 

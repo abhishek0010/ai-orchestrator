@@ -3,7 +3,8 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-04-09
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`2db041b`](https://github.com/Mybono/ai-orchestrator/commit/2db041bc7dd77a59288a84d4818546b869578410) Introduce plugin-route for specific tasks and refine route logic
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`fec665f`](https://github.com/Mybono/ai-orchestrator/commit/fec665f2086692f90155d27f8e06e152f1b23d27) Add support for integration tests and release management
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`c7b8ab9`](https://github.com/Mybono/ai-orchestrator/commit/c7b8ab972d5c83b2bc574e75141f8fbd60a0174a) Introduce plugin-route for specific tasks and refine route logic
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`3efdd8a`](https://github.com/Mybono/ai-orchestrator/commit/3efdd8a718f9089b108e8e82f7a3a7bb9f1ddcae) Add initial API authentication using JWT
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`189be7b`](https://github.com/Mybono/ai-orchestrator/commit/189be7bd17e94e0cdef26eb0c40a187302f62344) Add context budget and improve error handling
 - ![docs](https://img.shields.io/badge/docs-0075ca?style=flat-square) [`421f7b8`](https://github.com/Mybono/ai-orchestrator/commit/421f7b84d135fc44d7cc9f5d04fcbdc35a7e6f1a) Add detailed agent documentation for context-manager, error-coordinator, performance-monitor, and security-auditor
