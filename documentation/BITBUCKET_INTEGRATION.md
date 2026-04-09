@@ -2,7 +2,7 @@
 
 This guide explains how to integrate the **AI PR Review System** into your Bitbucket repositories.
 
-## 🔑 Prerequisites
+## Prerequisites
 
 1. **Anthropic API Key**: A central API key for your organization.
 2. **Bitbucket Access Token**:
@@ -12,8 +12,9 @@ This guide explains how to integrate the **AI PR Review System** into your Bitbu
     In each repository, go to **Repository settings** > **Pipelines** > **Repository variables** and add:
     * `ANTHROPIC_API_KEY`: Your Claude API key (Secured).
     * `BITBUCKET_API_TOKEN`: The access token created above (Secured).
+    * `JIRA_SERVICE_ACCOUNT`: The email address for the AI agent (e.g., <ai-agent@mybono.com>).
 
-## 🚀 Setup
+## Setup
 
 Add the following to your `bitbucket-pipelines.yml` file:
 
@@ -37,12 +38,27 @@ pipelines:
       - parallel:
           - step:
               <<: *ai-review-step
-              name: "AI Hygiene Bot"
+              name: "AI Hygiene Agent (Auto-Fix)"
               env:
                 REVIEW_TYPE: "hygiene"
+                AUTO_FIX: "true" # Enable automatic fixes
+              script:
+                - git clone --branch v1.0.4 --depth 1 https://github.com/Mybono/ai-orchestrator.git .ai-orchestrator
+                - export ORCHESTRATOR_PATH=./.ai-orchestrator
+                - node .ai-orchestrator/scripts/bitbucket-review.js
+                # Setup git for auto-commit
+                - git config user.name "AI Orchestrator"
+                - git config user.email "${JIRA_SERVICE_ACCOUNT}"
+                # Check for changes and push
+                - |
+                  if ! git diff --quiet; then
+                    git add .
+                    git commit -m "style: AI suggested hygiene fixes"
+                    git push origin HEAD:${BITBUCKET_BRANCH}
+                  fi
           - step:
               <<: *ai-review-step
-              name: "AI Security Bot"
+              name: "AI Security Agent"
               env:
                 REVIEW_TYPE: "security"
           - step:
@@ -50,6 +66,18 @@ pipelines:
               name: "AI Logic Review"
               env:
                 REVIEW_TYPE: "general"
+          - step:
+              <<: *ai-review-step
+              name: "AI DevOps Agent"
+              condition:
+                changesets:
+                  includePaths:
+                    - "**/Dockerfile"
+                    - "bitbucket-pipelines.yml"
+                    - "infrastructure/**"
+                    - "terraform/**"
+              env:
+                REVIEW_TYPE: "devops"
 ```
 
 ## ⚙️ Configuration Variables
@@ -69,6 +97,29 @@ Custom environment variables you can set per step:
 
 The review will appear as a comment in the PR from the user associated with the `BITBUCKET_APP_PASSWORD`. Each comment is clearly labeled:
 
-* **AI Hygiene Bot Review**
-* **AI Security Bot Review**
+* **AI Hygiene Agent Review**
+* **AI Security Agent Review**
 * **AI General Review**
+* **AI DevOps Agent Review**
+* **AI Root Cause Analysis** (from the Debugger)
+
+## Self-Healing CI (Automated Debugger)
+
+You can configure your pipeline to automatically analyze failures (e.g., failing tests or builds) using the **AI Debugger**.
+
+### Wrapper Pattern
+
+To enable this, use the following pattern in your `bitbucket-pipelines.yml`:
+
+```yaml
+- step:
+    name: "Run Unit Tests"
+    script:
+      - npm test 2>&1 | tee test.log || (node .ai-orchestrator/scripts/ci-debugger.js test.log && exit 1)
+```
+
+**How it works:**
+
+1. `npm test 2>&1 | tee test.log`: Runs the tests, pipes both stdout and stderr to `test.log` while still showing it in the console.
+2. `||`: If the tests fail (exit code not 0)...
+3. `(node ...scripts/ci-debugger.js test.log && exit 1)`: The AI Debugger analyzes the log, posts a Root Cause Analysis comment to the PR, and then ensures the pipeline step still fails correctly.

@@ -3,6 +3,14 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-04-09
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`4c09488`](https://github.com/Mybono/ai-orchestrator/commit/4c09488e3b55d2d626edf754672c89d9b4bf73cc) Update bot terminology from "Bot" to "Agent"
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`c0259e8`](https://github.com/Mybono/ai-orchestrator/commit/c0259e89fbad875ca7e0a75aff5bd52c0dc1eca5) Add CI integration and self-healing CI for automated debugging
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`72996d4`](https://github.com/Mybono/ai-orchestrator/commit/72996d4afef9aa2a444cf0682a8c319b88089b3a) Add devops review support
+- ![docs](https://img.shields.io/badge/docs-0075ca?style=flat-square) [`105d20c`](https://github.com/Mybono/ai-orchestrator/commit/105d20cb44454fbec0665f21b8955ceb1fe2e378) Add local use and mentorship section for Architect agent
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`044b74c`](https://github.com/Mybono/ai-orchestrator/commit/044b74cb6219ea08f55c9d6af05ccd622c679cd3) Update security audit and test coverage checks
+
+## v1.0.6 — 2026-04-09
+### 2026-04-09
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`3ee5975`](https://github.com/Mybono/ai-orchestrator/commit/3ee5975a787e7023cb861d7a9cb53fe38ad81e27) Auto-fix markdown lint errors
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`443b977`](https://github.com/Mybono/ai-orchestrator/commit/443b977c78a4c81b6334302dced0be3434f531aa) Bump version to 1.0.5
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`cc30b27`](https://github.com/Mybono/ai-orchestrator/commit/cc30b27283186ba974c7b6a231c4212672f96bf4) Add support for Bitbucket review functionality

@@ -126,6 +126,8 @@ Analyzes errors, stack traces, and logs to find the fundamental cause of a failu
 
 The agent ALWAYS loads `skills/root-cause-analysis/SKILL.md` before starting the analysis. It gathers the logs and relevant source code, conducts a systematic 5-Whys analysis, and outputs a structured Root Cause Analysis report.
 
+- **CI Integration**: Can be used in pipelines to automatically analyze failed logs (via `scripts/ci-debugger.js`).
+
 ## [architect](../agents/architect.md)
 
 Evaluates designs, proposed refactors, and technology choices using fundamental truths instead of analogies.
@@ -135,6 +137,21 @@ Evaluates designs, proposed refactors, and technology choices using fundamental 
 - **Ollama role**: `architect` (qwen2.5-coder:14b)
 
 The agent ALWAYS loads `skills/first-principles/SKILL.md`. It identifies the core job to be done, challenges all current assumptions, identifies ground truths, and builds up the recommended solution from those fundamentals. It is the primary agent for "Phase 1: Planning".
+
+### Local Use & Mentorship (Onboarding)
+
+Developers can use the Architect agent directly in their AI IDE (Cursor, VS Code + Copilot/Cline) or Claude Code to learn project standards and architectural patterns.
+
+**How to invoke:**
+
+1. **Mention the Agent**: In your chat, point to `agents/architect.md` (using `@` or as context).
+2. **Ask for Guidance**: Provide the path to the project or folder you are working on.
+
+**Example Prompts:**
+
+- *"Read `agents/architect.md` and tell me: how do we correctly add a new endpoint in `src/routes/` according to our standards?"*
+- *"Based on our architectural rules, is this the right way to handle database transactions in this module?"*
+- *"I am new here. Can you explain the project structure of `src/` using the Architect's identity?"*
 
 ## [devops](../agents/devops.md)
 
