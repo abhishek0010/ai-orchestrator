@@ -1,12 +1,13 @@
 # Project Overview
 
-_Last updated: 2026-04-10 — context handoff protocol, tiered review, stale detection, triage fast path_
+_Last updated: 2026-04-16 by planner after task: create TypeScript parallel agent orchestrator with dependency-aware execution_
 
 ## Language(s)
 - Shell (Bash): `install.sh`, `call_ollama.sh`, `local-commit.sh`, `analyze_project.sh` — pure Bash + `jq` for orchestration — standarts: inferred from existing scripts (no dedicated standarts file)
 - Markdown: all agent, command, and skill files — the "code" of the system
+- TypeScript: `tsconfig.json` (new), `src/**/*.ts` (new) — standarts: `skills/ts-code-standarts.md`
 
-This is a **zero-dependency, Unix-native tooling repository**. All logic is handled via Bash, `jq`, and `curl` to interact with Ollama.
+This is a **zero-dependency, Unix-native tooling repository**. All logic is handled via Bash, `jq`, and `curl` to interact with Ollama. A new TypeScript orchestrator layer (`src/`) is being added for parallel execution.
 
 ## Key Files
 
@@ -66,6 +67,13 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 | `plugins/security-guidance/` | Security guidance plugin — vulnerability fixes and security audit commands |
 | `llm-config.json` | Centralized model role configuration — symlinked to `~/.claude/llm-config.json` |
 | `.claude/settings.json.template` | Template for `settings.json` — contains `PreToolUse` hook that blocks direct edits to `README.md` and `docs/` files; uses `__HOME__` placeholder replaced by `install.sh` |
+| `src/types/index.ts` | (new) All TypeScript domain types: `AgentDomain`, `AgentTask`, `AgentResult`, `RunResult`, `OrchestratorConfig`, `LlmConfig` |
+| `src/core/DependencyGraph.ts` | (new) DAG class with Kahn's topological sort — `getLevels()` returns `AgentTask[][]` for parallel execution |
+| `src/agents/AgentRunner.ts` | (new) Wraps `~/.claude/call_ollama.sh` via `child_process.spawn` — returns `RunResult` discriminated union |
+| `src/agents/PlannerAgent.ts` | (new) Per-domain planner — writes `task_context_<domain>.md` and returns `AgentTask` with pre-wired dependencies |
+| `src/core/Orchestrator.ts` | (new) Main orchestrator class — triage → planAll (parallel) → execute (by levels) → review |
+| `src/index.ts` | (new) CLI entry point — reads `process.argv[2]` as task, runs `Orchestrator.run()` |
+| `tsconfig.json` | (new) TypeScript strict ESM config — target ES2022, module NodeNext, `noUncheckedIndexedAccess: true` |
 
 ## Architecture & Conventions
 
@@ -73,9 +81,10 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 - All agents are Markdown files in `agents/` with a YAML front-matter block (`name`, `description`, `tools`) — no `model` field; models are defined exclusively in `llm-config.json`
 - All slash commands are Markdown files in `commands/` with no front-matter — they describe steps to orchestrate agents
 - Language standarts are in `skills/` and are named `<lang>-code-standarts.md` (note: "standarts" not "standards" — intentional spelling in filenames)
-- Context files produced during a task go to `.claude/context/`: `triage.md`, `task_context.md`, `pre_review.md`, `coder_output.md`, `review_fast_<file>.md`, `review_deep_<file>.md`, `fix_loop.md`, `project_overview.md`
+- Context files produced during a task go to `.claude/context/`: `triage.md`, `task_context.md`, `pre_review.md`, `coder_output.md`, `review_fast_<file>.md`, `review_deep_<file>.md`, `fix_loop.md`, `project_overview.md`, `task_context_<domain>.md` (per-domain plans from TypeScript orchestrator)
 - **Context Handoff Protocol**: orchestrator passes only file paths between steps — never full content; each agent reads its input files directly and writes its own structured output file
 - The full pipeline is: triage (Ollama) → Claude plans → pre-review (Ollama, standards checklist) → coder (Ollama) → build check → tiered review (fast + deep, parallel, Ollama) → fix loop (max 3 rounds) → track_savings.sh
+- **TypeScript orchestrator layer** (`src/`): ESM modules (`"type": "module"`), all imports use `.js` extensions, strict mode + `noUncheckedIndexedAccess`. Shell bridge is `~/.claude/call_ollama.sh` via `child_process.spawn`. No new heavy dependencies — only `typescript` + `tsx` + `@types/node` as devDeps.
 - **Zero Python dependency**: All agents call `scripts/call_ollama.sh` directly, which uses `curl` and `jq` for API interaction
 - `install.sh` uses symlinks, not file copies — a `git pull` updates everything without reinstall
 - New scripts must be added to both `SYMLINK_TARGETS` array and a `chmod +x` block in `scripts/install.sh`
@@ -105,3 +114,6 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 - `track_savings.sh` Step 5 in `/implement` is best-effort — skip silently if script not found (not yet installed)
 - Float arithmetic in bash scripts must use `jq -n` — bash `$(( ))` handles integers only
 - `call_ollama.sh` and `track_savings.sh` do NOT use `set -euo pipefail` — do not add it; callers depend on lenient error handling
+- `call_claude.sh` does NOT exist — the only shell LLM bridge is `~/.claude/call_ollama.sh`
+- TypeScript `src/` files must use `.js` import extensions even for `.ts` source — required by NodeNext ESM module resolution
+- `noUncheckedIndexedAccess: true` in tsconfig means array access returns `T | undefined` — guard all index access with `if (x === undefined) continue`

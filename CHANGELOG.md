@@ -2,7 +2,10 @@
 
 All notable changes to ai-orchestrator.
 ## [unreleased]
+### 2026-04-16
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`2137f70`](https://github.com/Mybono/ai-orchestrator/commit/2137f7095d1f3887fb7b49037fb1c8dd137db54b) Introduce AI orchestrator project with TypeScript
 ### 2026-04-10
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`6254e3b`](https://github.com/Mybono/ai-orchestrator/commit/6254e3b06403c0075cb59c7f5a1f87451fd8f4b4) Sync changelog after merge
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`d8b856b`](https://github.com/Mybono/ai-orchestrator/commit/d8b856b960482a3d774457186f5ce029f02a8f26) Bump version to 1.0.15 (#34)
 
 ## v1.0.15 — 2026-04-10
@@ -59,9 +62,6 @@ All notable changes to ai-orchestrator.
 ## v1.0.4 — 2026-04-08
 ### 2026-04-08
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`1636d77`](https://github.com/Mybono/ai-orchestrator/commit/1636d7775ad015908f43327298b9b2695150231d) Sync changelog after merge
-
-## v1.0.3 — 2026-04-08
-### 2026-04-08
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`e423463`](https://github.com/Mybono/ai-orchestrator/commit/e4234634f50f8b2fb981bf55e5c118cda00af11e) Auto-fix markdown lint errors
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`cb03846`](https://github.com/Mybono/ai-orchestrator/commit/cb038461ed460de9cce5c329fdfbd6f3fb146978) Add specialized plugin detection and documentation updates
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`a0ed7ed`](https://github.com/Mybono/ai-orchestrator/commit/a0ed7ed47109bdd28e9faad5870a09bf8279f5b5) Add new plugins for API design, Docker optimization, Kubernetes management, and security guidance
