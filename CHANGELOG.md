@@ -3,7 +3,8 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-04-17
-- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`9e87e0f`](https://github.com/Mybono/ai-orchestrator/commit/9e87e0f3ab5e0d43a76b5ea90f03fdb901cd2912) Update orchestrator logic to handle domain-specific files and write Ollama outputs
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`1dad7aa`](https://github.com/Mybono/ai-orchestrator/commit/1dad7aaefb3691a0af8613b12fab18661f75267c) Update triage agent for better context retrieval
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`a9a5c46`](https://github.com/Mybono/ai-orchestrator/commit/a9a5c46c9b3deb9cea4a1b60996dbb2b6f0c30f2) Update orchestrator logic to handle domain-specific files and write Ollama outputs
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`e73f513`](https://github.com/Mybono/ai-orchestrator/commit/e73f51396523cac02fe8b46e7aa1c31272ef4e10) Simplify orchestrator run method
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`90c3f06`](https://github.com/Mybono/ai-orchestrator/commit/90c3f0681c4ea6bd2feab9d72c8784b4f833e9a5) Update commit template with Conventional Commits
 ### 2026-04-16

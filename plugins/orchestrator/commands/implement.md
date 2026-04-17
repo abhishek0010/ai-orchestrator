@@ -26,16 +26,23 @@ Run the full plan → code → review pipeline for a coding task.
 
 **You are the triage agent.** Reason about the task — do not delegate this step.
 
-**Step 0.1 — Read the knowledge graph**
+**Step 0.1 — Get graph context (TriageAgent)**
 
-Check if `graphify-out/graph.json` exists. If yes:
+If `graphify-out/graph.json` exists, run:
 
-1. Parse it (node-link format: `nodes` + `links` arrays)
-2. Find nodes whose `label` matches keywords from the task (words > 3 chars)
-3. BFS depth=2 from matched nodes — collect neighbors and their edge `relation`
-4. This tells you what the task ACTUALLY touches beyond what the user wrote
+```bash
+npx tsx src/agents/TriageAgent.ts "<task description>"
+```
 
-Example: user says "change AgentRunner" → graph shows it connects to `PlannerAgent`, `Orchestrator`, `call_ollama.sh` via `calls` edges → you know tests and docs are also affected.
+This writes `.claude/context/triage_ts.md` with:
+
+- Affected nodes found by BFS depth=2
+- Their connections and edge relations
+- Project structure snapshot
+
+Read only `## Domains` and `## Reasoning` from `.claude/context/triage_ts.md` — do not carry full content.
+
+If `graphify-out/graph.json` does not exist — skip this step.
 
 **Step 0.2 — Decide domains and route**
 

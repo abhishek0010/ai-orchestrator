@@ -304,3 +304,26 @@ export class TriageAgent {
     writeFileSync(outputFile, lines.join('\n'), 'utf8');
   }
 }
+
+// CLI entry point: npx tsx src/agents/TriageAgent.ts "<task>"
+if (process.argv[1]?.endsWith('TriageAgent.ts') || process.argv[1]?.endsWith('TriageAgent.js')) {
+  const task = process.argv[2];
+  if (!task) {
+    process.stderr.write('Usage: npx tsx src/agents/TriageAgent.ts "<task description>"\n');
+    process.exit(1);
+  }
+
+  const { AgentRunner } = await import('./AgentRunner.js');
+  const { resolve } = await import('node:path');
+
+  const projectRoot = process.cwd();
+  const configPath = resolve(projectRoot, 'llm-config.json');
+  const contextDir = resolve(projectRoot, '.claude/context');
+
+  const runner = new AgentRunner(configPath);
+  const agent = new TriageAgent(runner, contextDir, projectRoot);
+  const result = await agent.analyze(task);
+
+  process.stdout.write(`Domains: ${result.domains.join(', ')}\n`);
+  process.stdout.write(`Written: .claude/context/triage_ts.md\n`);
+}
