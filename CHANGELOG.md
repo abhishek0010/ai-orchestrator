@@ -2,8 +2,10 @@
 
 All notable changes to ai-orchestrator.
 ## [unreleased]
+### 2026-04-17
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`74de643`](https://github.com/Mybono/ai-orchestrator/commit/74de643cd6e6d4d090ae7bc568d80a3bcb3ce002) Update commit template with Conventional Commits
 ### 2026-04-16
-- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`31dc99b`](https://github.com/Mybono/ai-orchestrator/commit/31dc99be4fe4fcecd051e1288a7cf129375eb33c) Add triage agent for dynamic domain detection
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`0470543`](https://github.com/Mybono/ai-orchestrator/commit/0470543992f7aaf53df043ead52bbc5cc88c0089) Add triage agent for dynamic domain detection
 - ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`90c43d0`](https://github.com/Mybono/ai-orchestrator/commit/90c43d043f362f36009216736e8412ede4381300) Introduce AI orchestrator project with TypeScript
 ### 2026-04-10
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`6254e3b`](https://github.com/Mybono/ai-orchestrator/commit/6254e3b06403c0075cb59c7f5a1f87451fd8f4b4) Sync changelog after merge
