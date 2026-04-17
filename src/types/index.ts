@@ -3,13 +3,13 @@ export type AgentDomain = 'coder' | 'unit-tester' | 'doc-writer' | 'devops';
 export type AgentTask = {
   readonly domain: AgentDomain;
   readonly dependencies: readonly AgentDomain[];
-  readonly contextFile: string;
+  readonly contextFile: string | undefined;
 };
 
 export type AgentResult = {
   readonly domain: AgentDomain;
   readonly output: string;
-  readonly contextFile: string;
+  readonly contextFile: string | undefined;
 };
 
 export type RunResult = { ok: true; output: string } | { ok: false; error: string };

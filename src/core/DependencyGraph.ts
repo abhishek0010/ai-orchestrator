@@ -5,6 +5,9 @@ export class DependencyGraph {
 
   constructor(tasks: AgentTask[]) {
     for (const task of tasks) {
+      if (this.tasks.has(task.domain)) {
+        throw new Error(`DependencyGraph: duplicate domain: "${task.domain}"`);
+      }
       this.tasks.set(task.domain, task);
     }
   }

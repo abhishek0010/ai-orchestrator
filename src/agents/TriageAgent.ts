@@ -71,7 +71,8 @@ export class TriageAgent {
 
       return triageResult;
     } catch (err) {
-      process.stderr.write(`[triage] unexpected error: ${String(err)}\n`);
+      const detail = err instanceof Error ? (err.stack ?? err.message) : String(err);
+      process.stderr.write(`[triage] unexpected error: ${detail}\n`);
 
       return TRIAGE_FALLBACK;
     }
@@ -216,7 +217,12 @@ export class TriageAgent {
       ...neighborLines,
     ];
 
-    return lines.join('\n').slice(0, 1500);
+    const full = lines.join('\n');
+    if (full.length > 1500) {
+      process.stderr.write(`[triage] graphify context truncated: ${full.length} → 1500 chars\n`);
+    }
+
+    return full.slice(0, 1500);
   }
 
   private buildPrompt(
@@ -318,10 +324,9 @@ if (isMain) {
   const { resolve } = await import('node:path');
 
   const projectRoot = process.cwd();
-  const configPath = resolve(projectRoot, 'llm-config.json');
   const contextDir = resolve(projectRoot, '.claude/context');
 
-  const runner = new AgentRunner(configPath);
+  const runner = new AgentRunner();
   const agent = new TriageAgent(runner, contextDir, projectRoot);
   const result = await agent.analyze(task);
 

@@ -7,12 +7,13 @@ import type { AgentDomain, RunResult } from '../types/index.js';
 const CALL_OLLAMA_SCRIPT = join(homedir(), '.claude', 'call_ollama.sh');
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
+const MAX_OUTPUT_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export class AgentRunner {
   private readonly callOllamaScript: string;
   private readonly timeoutMs: number;
 
-  constructor(_configPath: string, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  constructor(timeoutMs = DEFAULT_TIMEOUT_MS) {
     this.timeoutMs = timeoutMs;
     this.callOllamaScript = CALL_OLLAMA_SCRIPT;
 
@@ -38,6 +39,7 @@ export class AgentRunner {
       let stdout = '';
       let stderr = '';
       let settled = false;
+      let stdoutTruncated = false;
 
       const settle = (result: RunResult) => {
         if (settled) return;
@@ -51,6 +53,12 @@ export class AgentRunner {
       }, this.timeoutMs);
 
       proc.stdout.on('data', (chunk: Buffer) => {
+        if (stdoutTruncated) return;
+        if (stdout.length + chunk.length > MAX_OUTPUT_BYTES) {
+          stdoutTruncated = true;
+          process.stderr.write(`[agent-runner] ${role} stdout truncated at 10 MB\n`);
+          return;
+        }
         stdout += chunk.toString();
       });
       proc.stderr.on('data', (chunk: Buffer) => {

@@ -31,7 +31,7 @@ async function main(): Promise<void> {
   console.log(`\n[orchestrator] completed ${results.length} agent(s)`);
 
   for (const result of results) {
-    console.log(`  ${result.domain}: ${result.contextFile}`);
+    console.log(`  ${result.domain}: ${result.contextFile ?? '(no context file)'}`);
   }
 }
 

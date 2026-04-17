@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { AgentRunner } from '../agents/AgentRunner.js';
 import { DependencyGraph } from './DependencyGraph.js';
@@ -25,7 +25,8 @@ export class Orchestrator {
       throw new Error(`Orchestrator: configPath not found: ${resolvedConfig}`);
     }
 
-    this.runner = new AgentRunner(resolvedConfig);
+    mkdirSync(this.contextDir, { recursive: true });
+    this.runner = new AgentRunner();
   }
 
   /**
@@ -74,13 +75,13 @@ export class Orchestrator {
       }
 
       process.stderr.write(
-        `[orchestrator] warning: neither task_context_${domain}.md nor task_context.md found — proceeding with empty context\n`,
+        `[orchestrator] warning: neither task_context_${domain}.md nor task_context.md found — skipping domain\n`,
       );
 
       return {
         domain,
         dependencies: DOMAIN_DEPENDENCIES[domain],
-        contextFile: '',
+        contextFile: undefined,
       };
     });
   }
@@ -99,6 +100,14 @@ export class Orchestrator {
 
       const levelResults = await Promise.all(
         level.map(async (agentTask): Promise<AgentResult> => {
+          if (agentTask.contextFile === undefined) {
+            process.stderr.write(
+              `[orchestrator] skipping ${agentTask.domain}: no context file found\n`,
+            );
+
+            return { domain: agentTask.domain, output: '', contextFile: undefined };
+          }
+
           const result = await this.runner.run(agentTask.domain, agentTask.contextFile);
           const output = result.ok ? result.output : `ERROR: ${result.error}`;
 
@@ -128,10 +137,21 @@ export class Orchestrator {
    * Runs reviewer role for each result's context file concurrently.
    */
   private async review(results: AgentResult[]): Promise<void> {
+    const errors: string[] = [];
+
     await Promise.all(
       results.map(async result => {
+        if (result.contextFile === undefined) {
+          process.stderr.write(
+            `[orchestrator] review skipped for ${result.domain}: no context file\n`,
+          );
+
+          return;
+        }
+
         const reviewResult = await this.runner.run('reviewer', result.contextFile);
         if (!reviewResult.ok) {
+          errors.push(`${result.domain}: ${reviewResult.error}`);
           process.stderr.write(
             `[orchestrator] review failed for ${result.domain}: ${reviewResult.error}\n`,
           );
@@ -140,5 +160,9 @@ export class Orchestrator {
         }
       }),
     );
+
+    if (errors.length > 0) {
+      throw new Error(`[orchestrator] review failures:\n  ${errors.join('\n  ')}`);
+    }
   }
 }

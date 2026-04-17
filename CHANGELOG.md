@@ -3,7 +3,8 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-04-17
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`ed1da3e`](https://github.com/Mybono/ai-orchestrator/commit/ed1da3e29b23727bb1c6a6a9582604a4b6567cc4) Streamline code updates and improve efficiency
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`4ad04ac`](https://github.com/Mybono/ai-orchestrator/commit/4ad04ace592786290a6e128e73031efacf1b7079) Limit stdout and stderr output sizes
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`8fe536f`](https://github.com/Mybono/ai-orchestrator/commit/8fe536f0f1ce812b081219fa4b5ec9a51eca05ea) Streamline code updates and improve efficiency
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`a8d6230`](https://github.com/Mybono/ai-orchestrator/commit/a8d6230ebfadd06730422006cffce185f9043fda) Update triage agent for better context retrieval
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`a9a5c46`](https://github.com/Mybono/ai-orchestrator/commit/a9a5c46c9b3deb9cea4a1b60996dbb2b6f0c30f2) Update orchestrator logic to handle domain-specific files and write Ollama outputs
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`e73f513`](https://github.com/Mybono/ai-orchestrator/commit/e73f51396523cac02fe8b46e7aa1c31272ef4e10) Simplify orchestrator run method
