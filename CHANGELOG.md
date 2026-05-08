@@ -3,7 +3,7 @@
 All notable changes to ai-orchestrator.
 ## [unreleased]
 ### 2026-05-04
-- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`616ea13`](https://github.com/Mybono/ai-orchestrator/commit/616ea13e77323a0f12bb6c3fa1cd4a62921b2cb1) Remove trailing newline
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f49e05e`](https://github.com/Mybono/ai-orchestrator/commit/f49e05e089a7bfd67d45557425a56008cde5a556) Remove trailing newline
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`44cc9cf`](https://github.com/Mybono/ai-orchestrator/commit/44cc9cfbc9e8b95f137f0fabfb4e02c4262133bf) Sync changelog after merge
 
 ## v1.0.17 — 2026-04-17
