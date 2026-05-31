@@ -1,13 +1,13 @@
 {
   "models": {
-    "coder": "hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS",
-    "reviewer": "qwen2.5-coder:7b",
-    "pre-reviewer": "qwen2.5-coder:7b",
-    "debugger": "qwen2.5-coder:7b",
-    "devops": "qwen2.5-coder:7b",
-    "quick-coder": "qwen2.5-coder:7b",
-    "commit": "qwen2.5-coder:7b",
-    "triage": "llama3.1:8b",
+    "coder": "qwen3:32b-q4_K_M",
+    "reviewer": "qwen3:32b-q4_K_M",
+    "pre-reviewer": "qwen3:8b",
+    "debugger": "qwen3:32b-q4_K_M",
+    "devops": "qwen3:8b",
+    "quick-coder": "qwen3:8b",
+    "commit": "qwen3:8b",
+    "triage": "qwen3:8b",
     "embedding": "mxbai-embed-large"
   }
 }

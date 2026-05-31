@@ -4,3 +4,4 @@
 .claude/llm-config.json
 /dist
 /node_modules
+/graphify-out/cache/
