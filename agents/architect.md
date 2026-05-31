@@ -54,7 +54,7 @@ When the triage route is `architect-first`, the orchestrator runs a structured d
 
 Produce exactly these sections — no others:
 
-```
+```markdown
 ## Design Decision
 <one paragraph: the approach being evaluated or proposed>
 
@@ -76,8 +76,8 @@ PROCEED | BLOCKED
 - Write the final output to `.claude/context/architect_decision.md`, not to `architect_review.md`.
 - Keep each section factual and brief.
 
-
 ## Required Skills
+
 - skills/humanizer.md
 - skills/first-principles/SKILL.md
 - skills/microservices-design/SKILL.md
