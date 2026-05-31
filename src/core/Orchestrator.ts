@@ -5,7 +5,13 @@ import { AgentRunner } from '../agents/AgentRunner.js';
 import { DependencyGraph } from './DependencyGraph.js';
 import { compressDiff } from './DiffCompressor.js';
 import { CODE_GEN_INSTRUCTIONS, parseFileBlocks, writeFilesToProject } from './FileWriter.js';
-import type { AgentDomain, AgentResult, AgentTask } from '../types/index.js';
+import type {
+  AgentDomain,
+  AgentResult,
+  AgentTask,
+  OrchestratorResult,
+  ReviewOutcome,
+} from '../types/index.js';
 
 const DOMAIN_DEPENDENCIES: Record<AgentDomain, readonly AgentDomain[]> = {
   coder: [],
@@ -39,41 +45,47 @@ export class Orchestrator {
    * builds the dependency graph, executes in topological order,
    * writes generated files directly to the project, then reviews.
    */
-  async run(domains: AgentDomain[]): Promise<AgentResult[]> {
+  async run(domains: AgentDomain[]): Promise<OrchestratorResult> {
     if (domains.length === 0) {
       process.stderr.write('[developer-agent] no domains provided\n');
-      return [];
+      return { agentResults: [], reviewOutcome: { passed: true } };
     }
 
     console.log(`[developer-agent] domains: ${domains.join(', ')}`);
 
     const tasks = this.buildTasks(domains);
-    const results = await this.execute(tasks);
-    await this.review(results);
+    const agentResults = await this.execute(tasks);
+    const reviewOutcome = await this.review(agentResults);
 
-    return results;
+    return { agentResults, reviewOutcome };
   }
 
   private buildTasks(domains: AgentDomain[]): AgentTask[] {
+    const activeDomainSet = new Set(domains);
+
     return domains.map(domain => {
       const domainContextFile = join(this.contextDir, `task_context_${domain}.md`);
       const fallbackContextFile = join(this.contextDir, 'task_context.md');
 
+      // Prune dependency list to only include domains in the requested set.
+      // This makes isolation explicit: DependencyGraph never sees edges to absent nodes.
+      const prunedDeps = DOMAIN_DEPENDENCIES[domain].filter(dep => activeDomainSet.has(dep));
+
       if (existsSync(domainContextFile)) {
-        return { domain, dependencies: DOMAIN_DEPENDENCIES[domain], contextFile: domainContextFile };
+        return { domain, dependencies: prunedDeps, contextFile: domainContextFile };
       }
 
       if (existsSync(fallbackContextFile)) {
         process.stderr.write(
           `[developer-agent] task_context_${domain}.md not found — falling back to task_context.md\n`,
         );
-        return { domain, dependencies: DOMAIN_DEPENDENCIES[domain], contextFile: fallbackContextFile };
+        return { domain, dependencies: prunedDeps, contextFile: fallbackContextFile };
       }
 
       process.stderr.write(
         `[developer-agent] warning: no context file for domain "${domain}" — skipping\n`,
       );
-      return { domain, dependencies: DOMAIN_DEPENDENCIES[domain], contextFile: undefined };
+      return { domain, dependencies: prunedDeps, contextFile: undefined };
     });
   }
 
@@ -192,12 +204,12 @@ export class Orchestrator {
   }
 
   /**
-   * Runs reviewer role for each completed domain's output summary.
-   * When changed files are available, fetches and compresses the git diff,
-   * appending it to the review prompt so the reviewer sees actual code changes.
+   * Runs reviewer for each completed domain.
+   * Returns ReviewOutcome instead of throwing — the caller decides how to
+   * handle review failures separately from build failures or internal errors.
    */
-  private async review(results: AgentResult[]): Promise<void> {
-    const errors: string[] = [];
+  private async review(results: AgentResult[]): Promise<ReviewOutcome> {
+    const failedDomains: AgentDomain[] = [];
 
     await Promise.all(
       results.map(async result => {
@@ -233,7 +245,7 @@ export class Orchestrator {
 
         const reviewResult = await this.runner.run('reviewer', reviewPromptPath);
         if (!reviewResult.ok) {
-          errors.push(`${result.domain}: ${reviewResult.error}`);
+          failedDomains.push(result.domain);
           process.stderr.write(
             `[developer-agent] review failed for ${result.domain}: ${reviewResult.error}\n`,
           );
@@ -243,9 +255,9 @@ export class Orchestrator {
       }),
     );
 
-    if (errors.length > 0) {
-      throw new Error(`[developer-agent] review failures:\n  ${errors.join('\n  ')}`);
-    }
+    return failedDomains.length > 0
+      ? { passed: false, failedDomains }
+      : { passed: true };
   }
 
   /**

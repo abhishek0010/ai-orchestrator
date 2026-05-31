@@ -1,218 +1,198 @@
-<svg width="100%" viewBox="0 0 740 700" xmlns="http://www.w3.org/2000/svg">
+<svg width="760" height="920" viewBox="0 0 760 920" xmlns="http://www.w3.org/2000/svg">
 <defs>
-  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Arrow markers -->
+  <marker id="aW" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#30363d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
   </marker>
+  <marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#f85149" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="aG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <style>
+    .lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
+    .ttl { font-size: 13px; font-weight: 600; }
+    .dsc { font-size: 11px; }
+    .par { font-size: 9px; font-weight: 600; }
+    .note { font-size: 9px; }
+    .fail { font-size: 9px; font-weight: 600; }
+    .pass { font-size: 9px; }
+    .mono { font-family: "SF Mono", "Fira Code", monospace; }
+  </style>
 </defs>
 
-<!-- ── Title ── -->
-<text x="370" y="26" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,"system-ui","Segoe UI",sans-serif'
-  font-size="14" font-weight="500" fill="rgb(250,249,245)">/implement pipeline</text>
+<!-- Canvas background -->
+<rect x="0" y="0" width="760" height="920" rx="12" fill="#0d1117"/>
+
+<!-- Purple top stripe -->
+<rect x="0" y="0" width="760" height="3" rx="2" fill="#6e40c9"/>
+
+<!-- ══ TITLE ══ -->
+<text x="295" y="34" text-anchor="middle" class="ttl mono" font-size="16" font-weight="700" fill="#e6edf3">/implement pipeline</text>
+<text x="295" y="52" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">Claude Code · Ollama · TypeScript</text>
 
 <!-- ══ TRIGGER ══ -->
-<rect x="230" y="44" width="280" height="44" rx="8"
-  fill="rgb(68,68,65)" stroke="rgb(180,178,169)" stroke-width="0.5"/>
-<text x="370" y="62" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="14" font-weight="500" fill="rgb(211,209,199)">/implement "task"</text>
-<text x="370" y="79" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" fill="rgb(180,178,169)">Claude Code slash command</text>
+<rect x="50" y="66" width="490" height="44" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+<text x="295" y="87" text-anchor="middle" class="ttl mono" fill="#f0883e">/implement "task"</text>
+<text x="295" y="103" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">slash command · Claude Code CLI</text>
 
-<line x1="370" y1="88" x2="370" y2="104"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+<!-- Arrow: TRIGGER → TRIAGE -->
+<line x1="295" y1="110" x2="295" y2="124" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
 
-<!-- ══ TRIAGE ══ -->
-<rect x="230" y="104" width="280" height="56" rx="8"
-  fill="rgb(85,48,0)" stroke="rgb(220,145,40)" stroke-width="0.5"/>
-<text x="370" y="124" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="14" font-weight="500" fill="rgb(250,195,105)">Triage</text>
-<text x="370" y="143" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" fill="rgb(220,145,40)">Route detection · complexity analysis</text>
-<!-- badge -->
-<rect x="520" y="116" width="128" height="28" rx="14"
-  fill="rgb(85,48,0)" stroke="rgb(220,145,40)" stroke-width="0.5"/>
-<text x="584" y="130" text-anchor="middle"
-  font-family="ui-monospace,monospace" font-size="12" fill="rgb(220,145,40)">qwen3:8b</text>
-<line x1="510" y1="132" x2="520" y2="132"
-  stroke="rgb(156,154,146)" stroke-width="0.5" stroke-dasharray="4,3"/>
+<!-- ══ STEP 0 · TRIAGE ══ -->
+<rect x="50" y="124" width="490" height="82" rx="6" fill="#0f1625" stroke="#3a5fc8" stroke-width="1"/>
+<text x="80" y="143" class="lbl" font-family="system-ui, sans-serif" fill="#3a5fc8">STEP 0</text>
+<text x="295" y="143" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Triage</text>
+<text x="295" y="162" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">complexity · domains · route · BFS depth=2 on graph.json</text>
+<text x="80" y="185" class="lbl" font-family="system-ui, sans-serif" fill="#3d444d">EARLY EXITS →</text>
+<!-- direct-edit chip -->
+<rect x="193" y="173" width="80" height="17" rx="8" fill="#0a1f0a" stroke="#238636" stroke-width="1"/>
+<text x="233" y="186" text-anchor="middle" class="note mono" fill="#3fb950">direct-edit</text>
+<!-- quick-coder chip -->
+<rect x="281" y="173" width="84" height="17" rx="8" fill="#0a1f0a" stroke="#238636" stroke-width="1"/>
+<text x="323" y="186" text-anchor="middle" class="note mono" fill="#3fb950">quick-coder</text>
+<!-- plugin-route chip -->
+<rect x="373" y="173" width="84" height="17" rx="8" fill="#1a1200" stroke="#9e6a03" stroke-width="1"/>
+<text x="415" y="186" text-anchor="middle" class="note mono" fill="#f0883e">plugin-route</text>
+<!-- Model badge: TRIAGE -->
+<line x1="540" y1="155" x2="560" y2="155" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="560" y="144" width="116" height="22" rx="11" fill="#1a0e00" stroke="#d97706" stroke-width="1"/>
+<text x="618" y="159" text-anchor="middle" class="mono" font-size="10" fill="#f59e0b">Claude Sonnet</text>
 
-<!-- ── Architect-first branch (conditional) ── -->
-<!-- entry: Triage left-center → left → down into arch box top -->
-<path d="M230,132 L107,132 L107,166"
-  stroke="rgb(200,140,40)" stroke-width="1" stroke-dasharray="4,3"
-  fill="none" marker-end="url(#arr)"/>
-<text x="166" y="127" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="11" fill="rgb(200,140,40)">if architect-first</text>
-<!-- arch box -->
-<rect x="10" y="166" width="194" height="52" rx="8"
-  fill="rgb(52,22,92)" stroke="rgb(175,120,235)" stroke-width="0.8" stroke-dasharray="5,3"/>
-<text x="107" y="186" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="13" font-weight="500" fill="rgb(208,172,252)">Architect agent</text>
-<text x="107" y="204" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="11" fill="rgb(175,120,235)">Tension Loop · ≤ 2 rounds</text>
-<!-- exit: arch box bottom → down → right into Planner left side -->
-<path d="M107,218 L107,248 L230,248"
-  stroke="rgb(175,120,235)" stroke-width="1" stroke-dasharray="4,3"
-  fill="none" marker-end="url(#arr)"/>
+<!-- Arrow: TRIAGE → PLAN -->
+<line x1="295" y1="206" x2="295" y2="220" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
 
-<!-- main flow arrow: Triage → Planner -->
-<line x1="370" y1="160" x2="370" y2="224"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
-<text x="384" y="195" text-anchor="start"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="10" fill="rgb(130,128,120)">direct</text>
+<!-- ══ STEP 1 · PLAN ══ -->
+<rect x="50" y="220" width="490" height="150" rx="6" fill="#0f0b1e" stroke="#6e40c9" stroke-width="1"/>
+<text x="80" y="239" class="lbl" font-family="system-ui, sans-serif" fill="#6e40c9">STEP 1</text>
+<text x="295" y="239" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Plan</text>
+<!-- Sub-section: FULL-PIPELINE -->
+<text x="80" y="259" class="lbl" font-family="system-ui, sans-serif" fill="#3d444d">FULL-PIPELINE →</text>
+<rect x="372" y="248" width="130" height="17" rx="8" fill="#1a1040" stroke="#6e40c9" stroke-width="1"/>
+<text x="437" y="261" text-anchor="middle" class="par" font-family="system-ui, sans-serif" fill="#a5b4fc">‖ parallel per domain</text>
+<text x="295" y="278" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">Planner agent · writes task_context_&lt;domain&gt;.md</text>
+<text x="295" y="293" text-anchor="middle" class="note" font-family="system-ui, sans-serif" fill="#3d444d">each planner reads codebase independently — no shared state</text>
+<!-- Separator -->
+<line x1="70" y1="303" x2="530" y2="303" stroke="#30363d" stroke-width="1" stroke-dasharray="4 2"/>
+<!-- Sub-section: ARCHITECT-FIRST -->
+<text x="80" y="321" class="lbl" font-family="system-ui, sans-serif" fill="#f0883e">ARCHITECT-FIRST ONLY →</text>
+<rect x="394" y="310" width="78" height="17" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="1"/>
+<text x="433" y="323" text-anchor="middle" class="par" font-family="system-ui, sans-serif" fill="#f0883e">max 2 rounds</text>
+<text x="295" y="340" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">R1: architect_review.md → draft_plan.md → plan_concerns.md</text>
+<text x="295" y="357" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">R2 (if concerns): planner resolves → architect: RESOLVED / BLOCKED</text>
+<!-- Model badge: PLAN -->
+<line x1="540" y1="249" x2="560" y2="249" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="560" y="238" width="116" height="22" rx="11" fill="#1a0e00" stroke="#d97706" stroke-width="1"/>
+<text x="618" y="253" text-anchor="middle" class="mono" font-size="10" fill="#f59e0b">Claude Sonnet</text>
 
-<!-- ══ PLANNER ══ -->
-<rect x="230" y="224" width="280" height="56" rx="8"
-  fill="rgb(60,52,137)" stroke="rgb(175,169,236)" stroke-width="0.5"/>
-<text x="370" y="244" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="14" font-weight="500" fill="rgb(206,203,246)">Planner agent</text>
-<text x="370" y="262" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" fill="rgb(175,169,236)">Reads knowledge index · writes impl plan</text>
-<!-- badge -->
-<rect x="520" y="236" width="128" height="28" rx="14"
-  fill="rgb(60,52,137)" stroke="rgb(175,169,236)" stroke-width="0.5"/>
-<text x="584" y="250" text-anchor="middle"
-  font-family="ui-monospace,monospace" font-size="12" fill="rgb(175,169,236)">qwen3:8b</text>
-<line x1="510" y1="252" x2="520" y2="252"
-  stroke="rgb(156,154,146)" stroke-width="0.5" stroke-dasharray="4,3"/>
+<!-- Arrow: PLAN → ORCHESTRATE -->
+<line x1="295" y1="370" x2="295" y2="384" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
 
-<line x1="370" y1="280" x2="370" y2="298"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+<!-- ══ STEP 1.5 · ORCHESTRATE ══ -->
+<rect x="50" y="384" width="490" height="130" rx="6" fill="#08284c" stroke="#1f6feb" stroke-width="1"/>
+<text x="80" y="403" class="lbl" font-family="system-ui, sans-serif" fill="#1f6feb">STEP 1.5</text>
+<text x="295" y="403" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Orchestrate</text>
+<text x="295" y="421" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">npm start · Ollama agents in dependency order · writes files to project</text>
+<!-- Coder box -->
+<rect x="215" y="428" width="160" height="28" rx="6" fill="#0c1a2e" stroke="#1f6feb" stroke-width="1"/>
+<text x="295" y="440" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" font-weight="700" fill="#58a6ff">Ollama · coder</text>
+<text x="295" y="451" text-anchor="middle" class="note mono" font-size="9" fill="#1f6feb">qwen3:32b-q4_K_M</text>
+<!-- Dashed lines from coder to children -->
+<line x1="265" y1="456" x2="195" y2="468" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<line x1="325" y1="456" x2="395" y2="468" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<!-- Unit-tester box -->
+<rect x="110" y="468" width="165" height="28" rx="6" fill="#0c1a2e" stroke="#1f6feb" stroke-width="1"/>
+<text x="192" y="481" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" font-weight="700" fill="#58a6ff">Ollama · unit-tester</text>
+<text x="192" y="492" text-anchor="middle" class="note mono" font-size="9" fill="#1f6feb">qwen3:32b-q4_K_M</text>
+<!-- Doc-writer box -->
+<rect x="318" y="468" width="165" height="28" rx="6" fill="#0c1a2e" stroke="#1f6feb" stroke-width="1"/>
+<text x="400" y="481" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" font-weight="700" fill="#58a6ff">Ollama · doc-writer</text>
+<text x="400" y="492" text-anchor="middle" class="note mono" font-size="9" fill="#1f6feb">qwen3:32b-q4_K_M</text>
+<!-- Model badge: ORCHESTRATE -->
+<line x1="540" y1="430" x2="560" y2="430" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="560" y="419" width="116" height="22" rx="11" fill="#0c1a2e" stroke="#1f6feb" stroke-width="1"/>
+<text x="618" y="434" text-anchor="middle" class="mono" font-size="10" fill="#58a6ff">qwen3:32b</text>
 
-<!-- ══ CODER ══ -->
-<rect x="230" y="298" width="280" height="56" rx="8"
-  fill="rgb(12,68,124)" stroke="rgb(133,183,235)" stroke-width="0.5"/>
-<text x="370" y="318" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="14" font-weight="500" fill="rgb(181,212,244)">Coder agent</text>
-<text x="370" y="336" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" fill="rgb(133,183,235)">Generates code via Ollama</text>
-<!-- badge -->
-<rect x="520" y="310" width="148" height="28" rx="14"
-  fill="rgb(12,68,124)" stroke="rgb(133,183,235)" stroke-width="0.5"/>
-<text x="594" y="324" text-anchor="middle"
-  font-family="ui-monospace,monospace" font-size="12" fill="rgb(133,183,235)">qwen3:32b</text>
-<line x1="510" y1="326" x2="520" y2="326"
-  stroke="rgb(156,154,146)" stroke-width="0.5" stroke-dasharray="4,3"/>
+<!-- Arrow: ORCHESTRATE → CODE -->
+<line x1="295" y1="514" x2="295" y2="528" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
 
-<line x1="370" y1="354" x2="370" y2="370"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+<!-- ══ STEP 2 · CODE ══ -->
+<rect x="50" y="528" width="490" height="68" rx="6" fill="#050e1e" stroke="#388bfd" stroke-width="1"/>
+<text x="80" y="547" class="lbl" font-family="system-ui, sans-serif" fill="#388bfd">STEP 2</text>
+<text x="295" y="547" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Code</text>
+<rect x="370" y="536" width="104" height="17" rx="8" fill="#050e1e" stroke="#388bfd" stroke-width="1"/>
+<text x="422" y="549" text-anchor="middle" class="par" font-family="system-ui, sans-serif" fill="#79c0ff">‖ parallel per domain</text>
+<text x="295" y="567" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">Claude coder applies ollama_output · writes coder_output_&lt;domain&gt;.md</text>
+<text x="295" y="582" text-anchor="middle" class="note" font-family="system-ui, sans-serif" fill="#3d444d">reads each domain's output independently — no shared state</text>
+<!-- Model badge: CODE -->
+<line x1="540" y1="555" x2="560" y2="555" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="560" y="544" width="116" height="22" rx="11" fill="#1a0e00" stroke="#d97706" stroke-width="1"/>
+<text x="618" y="559" text-anchor="middle" class="mono" font-size="10" fill="#f59e0b">Claude Sonnet</text>
 
-<!-- ══ DIFFCOMPRESSOR (NEW) ══ -->
-<rect x="230" y="370" width="280" height="40" rx="6"
-  fill="rgb(0,50,70)" stroke="rgb(65,165,195)" stroke-width="0.5"/>
-<text x="370" y="386" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="13" font-weight="500" fill="rgb(115,195,220)">DiffCompressor</text>
-<text x="370" y="401" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="10" fill="rgb(65,165,195)">strips locks · collapses blanks · truncates large diffs</text>
+<!-- Arrow: CODE → PRE-REVIEW -->
+<line x1="295" y1="596" x2="295" y2="610" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
 
-<line x1="370" y1="410" x2="370" y2="424"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+<!-- ══ STEP 2.5 · PRE-REVIEW ══ -->
+<rect x="50" y="610" width="490" height="52" rx="6" fill="#041410" stroke="#1b7a6e" stroke-width="1"/>
+<text x="80" y="630" class="lbl" font-family="system-ui, sans-serif" fill="#1b7a6e">STEP 2.5</text>
+<text x="295" y="630" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Pre-Review</text>
+<rect x="400" y="619" width="104" height="17" rx="8" fill="#051f1a" stroke="#1b7a6e" stroke-width="1"/>
+<text x="452" y="632" text-anchor="middle" class="par" font-family="system-ui, sans-serif" fill="#56d364">‖ parallel per domain</text>
+<text x="295" y="650" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">standards compliance · validates output before build</text>
+<!-- Model badge: PRE-REVIEW -->
+<line x1="540" y1="636" x2="560" y2="636" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="560" y="625" width="116" height="22" rx="11" fill="#051f1a" stroke="#1b7a6e" stroke-width="1"/>
+<text x="618" y="640" text-anchor="middle" class="mono" font-size="10" fill="#56d364">qwen3:8b</text>
 
-<!-- ══ BUILD CHECK ══ -->
-<rect x="230" y="424" width="280" height="44" rx="8"
-  fill="rgb(99,56,6)" stroke="rgb(239,159,39)" stroke-width="0.5"/>
-<text x="370" y="442" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="14" font-weight="500" fill="rgb(250,199,117)">Build check</text>
-<text x="370" y="459" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" fill="rgb(239,159,39)">tsc / py_compile · lint</text>
+<!-- Arrow: PRE-REVIEW → BUILD -->
+<line x1="295" y1="662" x2="295" y2="676" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
 
-<!-- fail loop: Build left → left → up → Coder left -->
-<path d="M230,446 L188,446 L188,326 L230,326"
-  fill="none" stroke="rgb(186,117,23)" stroke-width="1" stroke-dasharray="4,3"
-  marker-end="url(#arr)"/>
-<text x="174" y="390" text-anchor="end"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="11" fill="rgb(194,192,182)">fail</text>
+<!-- ══ STEP 3 · BUILD ══ -->
+<rect x="50" y="676" width="490" height="50" rx="6" fill="#140e00" stroke="#9e6a03" stroke-width="1"/>
+<text x="80" y="695" class="lbl" font-family="system-ui, sans-serif" fill="#9e6a03">STEP 3</text>
+<text x="295" y="695" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Build / Type check</text>
+<text x="295" y="713" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">tsc --noEmit · py_compile · collect changed files</text>
 
-<!-- pass arrow → Reviewer -->
-<line x1="370" y1="468" x2="370" y2="484"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+<!-- FAIL LOOP 1: build → code -->
+<path d="M50,701 L34,701 L34,562 L50,562" fill="none" stroke="#f85149" stroke-width="1.5" stroke-dasharray="3 2" marker-end="url(#aR)"/>
+<text x="34" y="634" text-anchor="middle" class="fail" font-family="system-ui, sans-serif" fill="#f85149" transform="rotate(-90,34,634)">fix syntax</text>
 
-<!-- ══ REVIEWER ══ -->
-<rect x="230" y="484" width="280" height="56" rx="8"
-  fill="rgb(8,80,65)" stroke="rgb(93,202,165)" stroke-width="0.5"/>
-<text x="370" y="504" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="14" font-weight="500" fill="rgb(159,225,203)">Reviewer agent</text>
-<text x="370" y="522" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" fill="rgb(93,202,165)">Reviews diff · conflict detection</text>
-<!-- badge -->
-<rect x="520" y="496" width="128" height="28" rx="14"
-  fill="rgb(8,80,65)" stroke="rgb(93,202,165)" stroke-width="0.5"/>
-<text x="584" y="510" text-anchor="middle"
-  font-family="ui-monospace,monospace" font-size="12" fill="rgb(93,202,165)">qwen3:8b</text>
-<line x1="510" y1="512" x2="520" y2="512"
-  stroke="rgb(156,154,146)" stroke-width="0.5" stroke-dasharray="4,3"/>
+<!-- Green pass arrow: BUILD → REVIEW -->
+<line x1="295" y1="726" x2="295" y2="742" stroke="#3fb950" stroke-width="1.5" marker-end="url(#aG)"/>
+<text x="311" y="738" class="pass" font-family="system-ui, sans-serif" fill="#3fb950">pass</text>
 
-<line x1="370" y1="540" x2="370" y2="554"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+<!-- ══ STEP 4 · REVIEW ══ -->
+<rect x="50" y="742" width="490" height="52" rx="6" fill="#041410" stroke="#1b7a6e" stroke-width="1"/>
+<text x="80" y="762" class="lbl" font-family="system-ui, sans-serif" fill="#1b7a6e">STEP 4</text>
+<text x="295" y="762" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Review</text>
+<text x="295" y="780" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">per-file parallel · fast + deep tiers · DiffCompressor</text>
 
-<!-- ══ QUALITY GATES (NEW) ══ -->
-<rect x="230" y="554" width="280" height="40" rx="6"
-  fill="rgb(78,18,14)" stroke="rgb(210,75,55)" stroke-width="0.5"/>
-<text x="370" y="570" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="13" font-weight="500" fill="rgb(240,135,115)">Quality Gates</text>
-<text x="370" y="585" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="10" fill="rgb(210,75,55)">pr-checkmate.json · no-staged-secrets · json-valid</text>
+<!-- FAIL LOOP 2: review → code -->
+<path d="M50,768 L14,768 L14,562 L50,562" fill="none" stroke="#f85149" stroke-width="1.5" stroke-dasharray="3 2" marker-end="url(#aR)"/>
+<text x="14" y="668" text-anchor="middle" class="fail" font-family="system-ui, sans-serif" fill="#f85149" transform="rotate(-90,14,668)">needs changes</text>
 
-<line x1="370" y1="594" x2="370" y2="610"
-  stroke="rgb(156,154,146)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+<!-- Model badge: REVIEW -->
+<line x1="540" y1="762" x2="560" y2="762" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="560" y="751" width="116" height="22" rx="11" fill="#051f1a" stroke="#1b7a6e" stroke-width="1"/>
+<text x="618" y="766" text-anchor="middle" class="mono" font-size="10" fill="#56d364">qwen3:32b</text>
 
-<!-- ══ COMMIT ══ -->
-<rect x="230" y="610" width="280" height="56" rx="8"
-  fill="rgb(39,80,10)" stroke="rgb(151,196,89)" stroke-width="0.5"/>
-<text x="370" y="630" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="14" font-weight="500" fill="rgb(192,221,151)">Commit agent</text>
-<text x="370" y="648" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" fill="rgb(151,196,89)">Stages, writes msg &amp; commits</text>
-<!-- badge -->
-<rect x="520" y="622" width="128" height="28" rx="14"
-  fill="rgb(39,80,10)" stroke="rgb(151,196,89)" stroke-width="0.5"/>
-<text x="584" y="636" text-anchor="middle"
-  font-family="ui-monospace,monospace" font-size="12" fill="rgb(151,196,89)">qwen3:8b</text>
-<line x1="510" y1="638" x2="520" y2="638"
-  stroke="rgb(156,154,146)" stroke-width="0.5" stroke-dasharray="4,3"/>
+<!-- Arrow: REVIEW → FIX LOOP -->
+<line x1="295" y1="794" x2="295" y2="808" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
 
-<!-- ══ Legend: call_ollama.sh ══ -->
-<rect x="10" y="474" width="170" height="116" rx="8"
-  fill="none" stroke="rgba(222,220,209,0.15)" stroke-width="0.8" stroke-dasharray="4,3"/>
-<text x="95" y="494" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="12" font-weight="500" fill="rgb(194,192,182)">call_ollama.sh</text>
-<text x="95" y="512" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="11" fill="rgb(156,154,146)">Ollama → Claude API fallback</text>
-<text x="95" y="528" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="11" fill="rgb(156,154,146)">prompt caching (ephemeral)</text>
-<text x="95" y="544" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="11" fill="rgb(156,154,146)">llm-config.json routing</text>
-<text x="95" y="560" text-anchor="middle"
-  font-family='"Anthropic Sans",-apple-system,sans-serif'
-  font-size="11" fill="rgb(156,154,146)">qwen3:32b · qwen3:8b</text>
-<line x1="180" y1="512" x2="230" y2="512"
-  stroke="rgb(156,154,146)" stroke-width="0.5" stroke-dasharray="4,3"/>
+<!-- ══ FIX LOOP ══ -->
+<rect x="130" y="808" width="330" height="44" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="3 2"/>
+<text x="295" y="828" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Fix loop</text>
+<text x="295" y="845" text-anchor="middle" class="dsc" font-family="system-ui, sans-serif" fill="#8b949e">max 3 rounds · circuit breaker on repeat errors</text>
+
+<!-- Arrow: FIX LOOP → DONE -->
+<line x1="295" y1="852" x2="295" y2="866" stroke="#30363d" stroke-width="1.5" marker-end="url(#aW)"/>
+
+<!-- ══ DONE ══ -->
+<rect x="130" y="866" width="330" height="36" rx="8" fill="#081508" stroke="#238636" stroke-width="1"/>
+<text x="295" y="889" text-anchor="middle" class="ttl" font-family="system-ui, sans-serif" fill="#e6edf3">Done · git diff · track savings</text>
+
+<!-- Footer -->
+<text x="295" y="910" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3d444d">github.com/Mybono/ai-orchestrator</text>
 
 </svg>

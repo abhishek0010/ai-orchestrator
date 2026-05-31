@@ -1,6 +1,6 @@
 # Project Overview
 
-_Last updated: 2026-05-31 by planner after task: add architect-first Tension Loop route for complex tasks_
+_Last updated: 2026-05-31 by planner after task: fix triage route branching, DOMAIN_DEPENDENCIES pruning, typed fail loops, and SVG pipeline redesign_
 
 ## Language(s)
 - Shell (Bash): `install.sh`, `call_ollama.sh`, `local-commit.sh`, `analyze_project.sh` — pure Bash + `jq` for orchestration — standarts: `.claude/skills/bash-code-standarts.md`
@@ -19,7 +19,7 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 | `agents/planner.md` | Authoritative source of project context — explores codebase, writes `.claude/context/task_context.md` and maintains `project_overview.md`; Phase 0 gates on `architect_decision.md` if present |
 | `agents/coder.md` | Coding agent — reads context, generates code via `call_ollama.sh` (role: coder), applies changes |
 | `agents/reviewer.md` | Review agent — diffs changed files, invokes `call_ollama.sh` (role: reviewer), reports verdict |
-| `agents/quick-coder.md` | Fast fix agent — uses `qwen2.5-coder:7b` via `call_ollama.sh` (role: quick-coder) |
+| `agents/quick-coder.md` | Fast fix agent — uses `qwen3:8b` via `call_ollama.sh` (role: quick-coder) |
 | `agents/commit.md` | Commit agent — generates commit message via `call_ollama.sh` (role: commit), stages and commits |
 | `agents/doc-writer.md` | Documentation agent — reads git diff, drafts docs via `call_ollama.sh` (role: reviewer) |
 | `agents/test-agent.md` | Test agent — generates and runs tests via `call_ollama.sh` (role: coder) |
@@ -67,19 +67,22 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 | `plugins/release-manager/` | Release manager plugin — version bump, changelog update, and release commands |
 | `plugins/reviewer/` | Reviewer plugin — code review and language standards commands |
 | `plugins/security-guidance/` | Security guidance plugin — vulnerability fixes and security audit commands |
-| `llm-config.json` | Centralized model role configuration — symlinked to `~/.claude/llm-config.json`; contains `"models"` (Ollama role→model) and `"fallback"` (Claude API role→model for when Ollama is unavailable); heavy roles → `claude-sonnet-4-6`, light roles → `claude-haiku-4-5-20251001` |
+| `llm-config.json` | Centralized model role configuration — symlinked to `~/.claude/llm-config.json`; `"models"`: triage/pre-reviewer/quick-coder/devops → `qwen3:8b`, coder/reviewer/debugger → `qwen3:32b-q4_K_M`, commit → `qwen2.5-coder:7b`; `"fallback"`: heavy → `claude-sonnet-4-6`, light → `claude-haiku-4-5-20251001` |
 | `.claude/settings.json.template` | Template for `settings.json` — contains `PreToolUse` hook that blocks direct edits to `README.md` and `docs/` files; uses `__HOME__` placeholder replaced by `install.sh` |
-| `src/types/index.ts` | All TypeScript domain types: `AgentDomain`, `AgentTask`, `AgentResult`, `RunResult`, `OrchestratorConfig`, `LlmConfig`, `TriageResult`, `TriageRoute` |
+| `src/types/index.ts` | All TypeScript domain types: `AgentDomain`, `AgentTask`, `AgentResult`, `RunResult`, `OrchestratorConfig`, `LlmConfig`, `TriageResult`, `TriageRoute`, `ReviewOutcome`, `OrchestratorResult` |
 | `src/core/DependencyGraph.ts` | DAG class with Kahn's topological sort — `getLevels()` returns `AgentTask[][]` for parallel execution |
 | `src/agents/AgentRunner.ts` | Wraps `~/.claude/call_ollama.sh` via `child_process.spawn` — returns `RunResult` discriminated union |
 | `src/agents/TriageAgent.ts` | LLM-powered triage — scans project structure, BFS traversal on `graphify-out/graph.json` (depth=2), route detection via `ARCHITECT_FIRST_KEYWORDS`, writes `triage_ts.md` with route + trigger reason; CLI entry-point guard uses `import.meta.url` |
-| `src/core/Orchestrator.ts` | Pure execution engine — accepts pre-written domain list, reads `task_context_<domain>.md` files, executes by levels, writes `ollama_output_<domain>.md`, fetches+compresses git diff via DiffCompressor before review |
+| `src/core/Orchestrator.ts` | Pure execution engine — accepts pre-written domain list, reads `task_context_<domain>.md` files, executes by levels, writes `ollama_output_<domain>.md`, fetches+compresses git diff via DiffCompressor before review; `run()` returns `OrchestratorResult`; `review()` returns `ReviewOutcome` (does not throw); `buildTasks()` prunes deps to active domain set |
 | `src/core/DiffCompressor.ts` | Git diff compressor — `compressDiff(diff)` strips lock-file hunks, collapses blank lines, truncates sections >500 lines; returns `CompressResult` with byte stats |
 | `src/core/FileWriter.ts` | Parses `%%FILE...%%ENDFILE` blocks from Ollama output and writes them to disk under projectRoot (path traversal guard included) |
-| `src/index.ts` | CLI entry point — parses `process.argv[2]` as comma-separated `AgentDomain` list, validates, runs `Orchestrator.run(domains)` |
+| `src/core/TriageRouter.ts` | Route reader — `readTriageRoute(contextDir)` parses `triage_ts.md` `## Route` section; returns `TriageRoute \| undefined`; never throws |
+| `src/core/BuildChecker.ts` | Build check — `runBuildCheck(projectRoot)` runs `npx tsc --noEmit`; returns module-local `BuildCheckResult` discriminated union; never throws |
+| `src/index.ts` | CLI entry point — parses domain list, reads triage route (exits early for `direct-edit`/`quick-coder`/`plugin-route`), runs `Orchestrator.run(domains)`, then `runBuildCheck`, exits with code 2 on build fail or code 3 on review fail |
 | `tsconfig.json` | TypeScript strict ESM config — target ES2022, module NodeNext, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true` |
 | `plugins/orchestrator/commands/implement.md` | `/implement` pipeline — Steps 0–6: triage → parallel planning per domain (Step 1) → multi-domain TS Orchestrator (Step 1.5) → apply Ollama output via Claude coder subagents with `model: haiku` (Step 2) → pre-review (Step 2.5) → code → build → post-review → fix loop → finalize |
 | `documentation/ARCHITECTURE.md` | Full pipeline diagram, layer table, triage domain/route tables, TS orchestrator internals, context file registry |
+| `ai_orchestrator_pipeline.svg` | Visual pipeline diagram — be-agent structure with STEP labels, early exit chips, two colored fail loops (red build-fail + red review-fail on left spine), green pass arrow, dep-order block for TS Orchestrator |
 
 ## Architecture & Conventions
 
@@ -95,7 +98,7 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 - **TypeScript orchestrator layer** (`src/`): ESM modules (`"type": "module"`), all imports use `.js` extensions, strict mode + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`. Shell bridge is `~/.claude/call_ollama.sh` via `child_process.spawn`. No new heavy dependencies — only `typescript` + `tsx` + `@types/node` as devDeps.
 - **TriageAgent graph traversal**: reads `graphify-out/graph.json` (NetworkX node-link format), matches seed nodes by label keywords, runs BFS depth=2, formats "Affected nodes: X\nConnected to:\n- Y (via relation)" output truncated to 1500 chars
 - **TriageAgent CLI guard**: uses `import.meta.url === \`file://${process.argv[1]}\`` (ESM-correct, NodeNext)
-- **DOMAIN_DEPENDENCIES** constant lives in `Orchestrator.ts` (not PlannerAgent — that file no longer exists)
+- **DOMAIN_DEPENDENCIES** constant lives in `Orchestrator.ts` — complete `Record<AgentDomain, readonly AgentDomain[]>`; `buildTasks()` prunes each domain's dep list to only include domains present in the caller's requested set
 - **Zero Python dependency**: All agents call `scripts/call_ollama.sh` directly, which uses `curl` and `jq` for API interaction
 - `install.sh` uses symlinks, not file copies — a `git pull` updates everything without reinstall
 - New scripts must be added to both `SYMLINK_TARGETS` array and a `chmod +x` block in `scripts/install.sh`
@@ -110,7 +113,10 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 - **llm-config.json fallback section**: `"fallback"` maps each role to a Claude model (`claude-sonnet-4-6` for heavy roles; `claude-haiku-4-5-20251001` for light roles)
 - **graphify-update.sh Python API**: never use `python3 -m graphify` CLI; always call the Python API directly
 - **DiffCompressor module**: `src/core/DiffCompressor.ts` — `CompressResult` type is local to that file and not in `src/types/index.ts`
-- **Orchestrator review flow**: after writing `developer_output_<domain>.md`, fetches git diff, compresses via `compressDiff`, writes combined `review_prompt_<domain>.md`, passes that to reviewer
+- **BuildChecker module**: `src/core/BuildChecker.ts` — `BuildCheckResult` type is local to that file, NOT in `src/types/index.ts` (same pattern as `CompressResult`)
+- **TriageRouter module**: `src/core/TriageRouter.ts` — `readTriageRoute(contextDir)` parses `triage_ts.md` `## Route` section using regex `/^## Route\s*\n([^\n]+)/m`; returns `undefined` on any failure
+- **Orchestrator review flow**: after writing `developer_output_<domain>.md`, fetches git diff, compresses via `compressDiff`, writes combined `review_prompt_<domain>.md`, passes that to reviewer; returns `ReviewOutcome` discriminated union instead of throwing
+- **Exit codes from src/index.ts**: 0 = success or early-exit route; 1 = fatal/unexpected error; 2 = build check failed; 3 = review failed
 
 ## Do Not Touch
 
@@ -124,7 +130,7 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 
 - Never mock Ollama in tests: the system relies on real local model responses
 - The `debug.md` agent file does not exist in `agents/` — it exists only as `commands/debug.md`
-- `quick-coder` uses `qwen2.5-coder:7b` — never use it for multi-file changes or new classes
+- `quick-coder` uses `qwen3:8b` — never use it for multi-file changes or new classes
 - The fix loop in `/implement` is capped at 3 rounds — after that, unresolved issues are reported to the user
 - `track_savings.sh` Step 6 in `/implement` is best-effort — skip silently if script not found (not yet installed)
 - Float arithmetic in bash scripts must use `jq -n` — bash `$(( ))` handles integers only
@@ -138,9 +144,11 @@ This is a **zero-dependency, Unix-native tooling repository**. All logic is hand
 - `exactOptionalPropertyTypes: true` in tsconfig means optional fields typed `string?` cannot be assigned `undefined` — always type optional fields as `string | undefined` explicitly
 - `graphify-out/` may not exist — all graphify code guards with `existsSync` before reading
 - `TriageResult.graphifyContext` must be typed `string | undefined` (not `string?`) due to `exactOptionalPropertyTypes` — same applies to new `route` and `triggerReason` fields
-- `Orchestrator.run()` now takes `AgentDomain[]`, not a task string — callers (index.ts, implement.md) must parse domains before calling
+- `Orchestrator.run()` now returns `OrchestratorResult` (not `AgentResult[]`) — callers must destructure `{ agentResults, reviewOutcome }`
 - `readdirSync` is no longer imported in `TriageAgent.ts` — the BFS implementation reads only `graph.json` directly
 - Step 2 coder subagents in `implement.md` use `model: haiku` — mechanical apply-edits work, no deep reasoning needed
 - `DiffCompressor.compressDiff` never throws — all transformation errors are silent
 - Tension Loop output file is `.claude/context/architect_decision.md` — distinct from `.claude/context/architect_review.md` which is the standard activation output
 - `ARCHITECT_FIRST_KEYWORDS` in `TriageAgent.ts` is a module-level `readonly string[]` constant — not a type, not an enum
+- `readTriageRoute` returns `undefined` for absent file, missing `## Route` section, or unrecognized value — callers treat `undefined` as `full-pipeline`
+- `runBuildCheck` in `BuildChecker.ts` is `async` for interface consistency even though `execSync` is synchronous internally — do not change to sync

@@ -8,7 +8,7 @@
 TypeScript + Bash orchestration that runs AI agents — Ollama for code generation, Claude for planning and triage — in parallel, in dependency order.
 
 <p align="center">
-  <img src="documentation/pipeline.svg" alt="ai-orchestrator pipeline" width="680">
+  <img src="ai_orchestrator_pipeline.svg" alt="ai-orchestrator pipeline" width="680">
 </p>
 
 ## How it works

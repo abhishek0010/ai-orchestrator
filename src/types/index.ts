@@ -48,3 +48,12 @@ export type TriageResult = {
   readonly route: TriageRoute | undefined;
   readonly triggerReason: string | undefined;
 };
+
+export type ReviewOutcome =
+  | { readonly passed: true }
+  | { readonly passed: false; readonly failedDomains: readonly AgentDomain[] };
+
+export type OrchestratorResult = {
+  readonly agentResults: readonly AgentResult[];
+  readonly reviewOutcome: ReviewOutcome;
+};
