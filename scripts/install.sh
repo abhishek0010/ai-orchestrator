@@ -95,6 +95,15 @@ done
 TRIAGE_WRAPPER="$CLAUDE_DIR/triage-agent.sh"
 cat > "$TRIAGE_WRAPPER" <<WRAPPER
 #!/bin/bash
+# Load nvm if npm/npx not in PATH
+if ! command -v npx >/dev/null 2>&1 && [ -s "\$HOME/.nvm/nvm.sh" ]; then
+  # shellcheck source=/dev/null
+  source "\$HOME/.nvm/nvm.sh"
+fi
+if ! command -v npx >/dev/null 2>&1; then
+  echo "❌ npx not found. Install Node.js: https://github.com/nvm-sh/nvm" >&2
+  exit 1
+fi
 PROJECT_ROOT="\$(pwd)"
 cd "$REPO_DIR"
 PROJECT_ROOT="\$PROJECT_ROOT" npx tsx src/agents/TriageAgent.ts "\$@"
@@ -105,6 +114,15 @@ echo "  ✓ triage-agent.sh (wraps $REPO_DIR)"
 TS_ORCH_WRAPPER="$CLAUDE_DIR/ts-orchestrator.sh"
 cat > "$TS_ORCH_WRAPPER" <<WRAPPER
 #!/bin/bash
+# Load nvm if npm not in PATH
+if ! command -v npm >/dev/null 2>&1 && [ -s "\$HOME/.nvm/nvm.sh" ]; then
+  # shellcheck source=/dev/null
+  source "\$HOME/.nvm/nvm.sh"
+fi
+if ! command -v npm >/dev/null 2>&1; then
+  echo "❌ npm not found. Install Node.js: https://github.com/nvm-sh/nvm" >&2
+  exit 1
+fi
 PROJECT_ROOT="\$(pwd)"
 cd "$REPO_DIR"
 PROJECT_ROOT="\$PROJECT_ROOT" npm start "\$@"

@@ -31,8 +31,8 @@ if [ -f .git/MERGE_HEAD ]; then
     echo -e "\nMerge commit message:"
     echo -e "\033[1;33m${MERGE_MSG}\033[0m\n"
 
-    read -rp "Commit merge? (y/N) " confirm
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    read -rp "Commit merge? (Y/N) " confirm
+    if [[ -z "$confirm" || "$confirm" =~ ^[Yy]$ ]]; then
         git commit --no-edit
 
         # Update CHANGELOG if git-cliff and config are available.
@@ -141,8 +141,8 @@ echo -e "\nProposed commit message:"
 echo -e "\033[1;32m$MESSAGE\033[0m\n"
 
 # Prompt the user for confirmation
-read -rp "Commit with this message? (y/N) " confirm
-if [[ "$confirm" =~ ^[Yy]$ ]]; then
+read -rp "Commit with this message? (Y/n) " confirm
+if [[ -z "$confirm" || "$confirm" =~ ^[Yy]$ ]]; then
     git commit -m "$MESSAGE"
 
     # Update CHANGELOG if git-cliff and config are available
