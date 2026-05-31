@@ -1,0 +1,38 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ao-commit",
+      "type": "shell",
+      "command": "bash ~/.claude/local-commit.sh",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ao-review",
+      "type": "shell",
+      "command": "bash ~/.claude/call_ollama.sh --role reviewer --prompt 'Review the current git diff for code quality, bugs, and standards compliance.' --context-file <(git diff HEAD --stat)",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ao-stats",
+      "type": "shell",
+      "command": "bash ~/.claude/scripts/track_savings.sh",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

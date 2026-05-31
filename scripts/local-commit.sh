@@ -60,6 +60,28 @@ fi
 echo "Staging all changes (git add -A)..."
 git add -A
 
+# Quality gates (pr-checkmate.json)
+CHECKMATE="$SCRIPT_DIR/../pr-checkmate.json"
+SKIP_GATES=false
+for arg in "$@"; do [ "$arg" = "--skip-gates" ] && SKIP_GATES=true; done
+
+if [ "$SKIP_GATES" = false ] && [ -f "$CHECKMATE" ]; then
+    GATE_NAMES=$(python3 -c "import json; d=json.load(open('$CHECKMATE')); [print(g['name']+'|'+g['command']+'|'+g['failMessage']+'|'+str(g['optional'])) for g in d['gates']]" 2>/dev/null)
+    while IFS='|' read -r gname gcmd gmsg gopt; do
+        [ -z "$gname" ] && continue
+        RESULT=$(eval "$gcmd" 2>&1)
+        EXIT=$?
+        if [ $EXIT -ne 0 ] || [ -n "$RESULT" ]; then
+            echo "[gate: $gname] $gmsg"
+            [ -n "$RESULT" ] && echo "$RESULT"
+            if [ "$gopt" = "False" ]; then
+                echo "Gate '$gname' failed. Use --skip-gates to bypass."
+                exit 1
+            fi
+        fi
+    done <<< "$GATE_NAMES"
+fi
+
 # Proactive reviews
 [ -f "$SCRIPT_DIR/markdown_review.sh" ] && bash "$SCRIPT_DIR/markdown_review.sh"
 [ -f "$SCRIPT_DIR/shellcheck.sh" ] && bash "$SCRIPT_DIR/shellcheck.sh"

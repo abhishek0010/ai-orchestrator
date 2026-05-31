@@ -1,0 +1,22 @@
+{
+  "name": "ai-orchestrator-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing ai-orchestrator tools to any MCP-compatible client",
+  "transport": "http",
+  "port": 3456,
+  "env": {
+    "MCP_PORT": "3456"
+  },
+  "tools": [
+    "get_stats",
+    "triage_task",
+    "get_agent_status",
+    "run_pipeline"
+  ],
+  "endpoints": {
+    "health": "GET /health",
+    "list_tools": "GET /tools/list",
+    "call_tool": "POST /tools/call"
+  },
+  "start": "npm run ao-mcp"
+}

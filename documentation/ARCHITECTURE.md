@@ -7,55 +7,62 @@
 The `/implement` command runs a multi-layer smart pipeline:
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│  Layer 0 — TRIAGE                                            │
-│  Detects complexity + domain → chooses route                 │
-│                                                              │
-│  nano → direct edit                                          │
-│  micro → quick-coder → build check                          │
-│  standard (single domain) → plugin-route                     │
-│  standard (multi-domain)  → full-pipeline                    │
-│  complex → architect-first → full-pipeline                   │
-└──────────────────────────────────────────────────────────────┘
-                            │
-          ┌─────────────────┴──────────────────┐
-          │ plugin-route                        │ full-pipeline
-          │                                     │
-          ▼                                     ▼
-┌─────────────────────┐         ┌──────────────────────────────┐
-│  Plugin file        │         │  Layer 1 — PLAN               │
-│  used as plan       │         │  Claude (orchestrator)        │
-│  (planner skipped)  │         │  → task_context.md            │
-└─────────────────────┘         │  (+ domain constraints)       │
-          │                     │                               │
-          │                     │  pre-reviewer (Ollama)        │
-          │                     │  → approves approach          │
-          │                     └──────────────────────────────┘
-          │                                     │
-          └─────────────────┬──────────────────┘
-                            │
-          ┌─────────────────▼──────────────────┐
-          │  Layer 2 — CODE                     │
-          │  coder (Ollama) → build check       │
-          └─────────────────────────────────────┘
-                            │
-          ┌─────────────────▼──────────────────┐
-          │  Layer 3 — GATE                     │
-          │  fast reviewer per file (parallel)  │
-          │  → deep reviewer (if issues found   │
-          │    or security/api domain)           │
-          └─────────────────────────────────────┘
-                            │
-          ┌─────────────────▼──────────────────┐
-          │  Layer 4 — FIX LOOP                 │
-          │  error-coordinator manages retries  │
-          │  max 3 rounds + circuit breaker     │
-          └─────────────────────────────────────┘
-                            │
-          ┌─────────────────▼──────────────────┐
-          │  Layer 5 — FINALIZE                 │
-          │  track_savings + performance-monitor│
-          └─────────────────────────────────────┘
++-----------------------------------------------------------------+
+|  Layer 0 - TRIAGE                                               |
+|  Detects complexity + domain -> chooses route                   |
+|                                                                 |
+|  nano -> direct edit                                            |
+|  micro -> quick-coder -> build check                            |
+|  standard (single domain) -> plugin-route                       |
+|  standard (multi-domain)  -> full-pipeline                      |
+|  complex -> architect-first -> full-pipeline                    |
++-----------------------------------------------------------------+
+                            |
+          +-----------------+-----------------+
+          | plugin-route                      | full-pipeline / architect-first
+          |                                   |
+          v                                   v
++---------------------+       +-------------------------------+
+|  Plugin file        |       |  architect-first (if routed)  |
+|  used as plan       |       |  architect <-> planner debate |
+|  (planner skipped)  |       |  up to 2 rounds               |
++---------------------+       |  -> architect_decision.md     |
+          |                   +-------------------------------+
+          |                                   |
+          |                   +-------------------------------+
+          |                   |  Layer 1 - PLAN               |
+          |                   |  Claude (orchestrator)        |
+          |                   |  -> task_context.md           |
+          |                   |  (+ domain constraints)       |
+          |                   |                               |
+          |                   |  pre-reviewer (Ollama)        |
+          |                   |  -> approves approach         |
+          |                   +-------------------------------+
+          |                                   |
+          +-----------------+-----------------+
+                            |
+          +-----------------v-----------------+
+          |  Layer 2 - CODE                   |
+          |  coder (Ollama) -> build check    |
+          +-----------------------------------+
+                            |
+          +-----------------v-----------------+
+          |  Layer 3 - GATE                   |
+          |  fast reviewer per file (parallel)|
+          |  -> deep reviewer (if issues found|
+          |    or security/api domain)        |
+          +-----------------------------------+
+                            |
+          +-----------------v-----------------+
+          |  Layer 4 - FIX LOOP               |
+          |  error-coordinator manages retries|
+          |  max 3 rounds + circuit breaker   |
+          +-----------------------------------+
+                            |
+          +-----------------v-----------------+
+          |  Layer 5 - FINALIZE               |
+          |  track_savings + performance-mon  |
+          +-----------------------------------+
 ```
 
 ### Layer details
@@ -65,7 +72,8 @@ Agents communicate exclusively through files in `.claude/context/`. The orchestr
 | Layer | Stage | Agent | Reads | Writes |
 |---|---|---|---|---|
 | 0 | Triage | Claude + TriageAgent (TS) | task description, `graph.json` | `triage_ts.md` |
-| 1 | Plan | Claude (orchestrator) | `triage_ts.md` | `task_context_<domain>.md` |
+| 0.5 | Tension Loop | architect + planner (Claude) | task description, prior round output | `architect_decision.md` |
+| 1 | Plan | Claude (orchestrator) | `triage_ts.md`, `architect_decision.md` (if present) | `task_context_<domain>.md` |
 | 1.5 | TS Orchestrator | Ollama (per domain) | `task_context_<domain>.md` | `ollama_output_<domain>.md` |
 | 1 | Pre-review | reviewer (Ollama) | `task_context_<domain>.md` | `pre_review.md` |
 | 2 | Code | Claude coder | `ollama_output_<domain>.md` | `coder_output_<domain>.md` |
@@ -97,6 +105,16 @@ Triage scans the task description for domain keywords and loads the matching plu
 | `ai_llm` | prompt, LLM, RAG, embedding, vector | ai-engineering | — |
 | `docs` | readme, docs, changelog | documentation | doc-writer |
 | `performance` | slow, optimize, cache, latency | database-tools | architect |
+
+### Triage routes
+
+| Route | Triggers | What happens |
+|---|---|---|
+| `direct-edit` | nano task (typo fix, single-line change) | Claude edits directly; no agents invoked |
+| `quick-coder` | micro task (single file, clear scope) | coder (Ollama) → build check |
+| `plugin-route` | single domain, task matches one plugin exactly | plugin command file used as plan; planner skipped |
+| `full-pipeline` | multi-domain or composite task | planner → coder → build check → reviewer |
+| `architect-first` | complexity=complex OR keywords: refactor, redesign, new module, architecture, migrate, extract, split, rewrite | architect ⇄ planner debate (max 2 rounds) → `architect_decision.md` → full-pipeline |
 
 ### Plugin-route vs Full-pipeline
 
@@ -152,11 +170,12 @@ If a domain fails, all dependents are set to `status: blocked` and never run. Th
 ```text
 src/
   types/index.ts        AgentDomain, KNOWN_DOMAINS, Role, AgentTask,
-                        AgentResult, RunResult, TriageResult
+                        AgentResult, RunResult, TriageResult, TriageRoute
   agents/
     AgentRunner.ts      Wraps call_ollama.sh via spawn; 5 min timeout;
                         10 MB stdout+stderr limit; validates promptFile before spawn
     TriageAgent.ts      BFS depth=2 on graph.json; writes triage_ts.md;
+                        route detection via ARCHITECT_FIRST_KEYWORDS;
                         CLI entry via import.meta.url
   core/
     DependencyGraph.ts  Kahn topological sort; throws on duplicate domains or cycles
@@ -242,7 +261,8 @@ Agents share state through files in `.claude/context/`:
 
 | File | Written by | Read by | Purpose |
 |---|---|---|---|
-| `triage_ts.md` | TriageAgent (TS, Layer 0) | planners, coders, reviewers | Detected domains, reasoning, graphify context used |
+| `triage_ts.md` | TriageAgent (TS, Layer 0) | planners, coders, reviewers | Detected domains, reasoning, route, graphify context used |
+| `architect_decision.md` | architect (Layer 0.5, Tension Loop) | planner (Layer 1) | Design decision, trade-offs, and PROCEED/BLOCKED verdict |
 | `task_context_<domain>.md` | Claude planner (Layer 1) | TS Orchestrator, Claude coder | Full plan per domain: signatures, patterns, domain standards |
 | `task_context.md` | Claude planner (fallback) | TS Orchestrator | Used when a domain-specific file is not present |
 | `ollama_output_<domain>.md` | TS Orchestrator (Layer 1.5) | Claude coder (Layer 2) | Ollama-generated code output for each domain |

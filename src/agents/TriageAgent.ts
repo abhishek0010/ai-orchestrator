@@ -2,14 +2,27 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { KNOWN_DOMAINS } from '../types/index.js';
-import type { AgentDomain, TriageResult } from '../types/index.js';
+import type { AgentDomain, TriageResult, TriageRoute } from '../types/index.js';
 import type { AgentRunner } from './AgentRunner.js';
 
 const TRIAGE_FALLBACK: TriageResult = {
   domains: ['coder'],
   reasoning: 'LLM call failed — fallback to coder',
   graphifyContext: undefined,
+  route: undefined,
+  triggerReason: undefined,
 };
+
+const ARCHITECT_FIRST_KEYWORDS: readonly string[] = [
+  'refactor',
+  'redesign',
+  'new module',
+  'architecture',
+  'migrate',
+  'extract',
+  'split',
+  'rewrite',
+] as const;
 
 type GraphNode = {
   readonly id: string;
@@ -60,7 +73,7 @@ export class TriageAgent {
         return TRIAGE_FALLBACK;
       }
 
-      const triageResult = this.parseResponse(result.output, graphifyContext);
+      const triageResult = this.parseResponse(task, result.output, graphifyContext);
 
       try {
         this.writeTriageOutput(task, triageResult);
@@ -255,7 +268,27 @@ export class TriageAgent {
     return parts.join('\n');
   }
 
-  private parseResponse(output: string, graphifyContext: string | undefined): TriageResult {
+  private detectRoute(
+    task: string,
+    complexity: string | undefined,
+  ): { route: TriageRoute; triggerReason: string } | undefined {
+    const lower = task.toLowerCase();
+    const matchedKeyword = ARCHITECT_FIRST_KEYWORDS.find(kw => lower.includes(kw));
+    if (matchedKeyword !== undefined || complexity === 'complex') {
+      const reason =
+        matchedKeyword !== undefined
+          ? `keyword match: "${matchedKeyword}"`
+          : 'complexity: complex';
+      return { route: 'architect-first', triggerReason: reason };
+    }
+    return undefined;
+  }
+
+  private parseResponse(
+    task: string,
+    output: string,
+    graphifyContext: string | undefined,
+  ): TriageResult {
     const domainsMatch = output.match(/#{1,6}\s*Domains\s*[:\n]([\s\S]*?)(?=#{1,6}|$)/i);
     const reasoningMatch = output.match(/#{1,6}\s*Reasoning\s*[:\n]([\s\S]*?)(?=#{1,6}|$)/i);
 
@@ -266,12 +299,20 @@ export class TriageAgent {
         domains: ['coder'],
         reasoning: 'LLM output unparseable — fallback to coder',
         graphifyContext,
+        route: undefined,
+        triggerReason: undefined,
       };
     }
 
     const domainBlock = domainsMatch[1];
     if (domainBlock === undefined) {
-      return { domains: ['coder'], reasoning: 'Empty domains block', graphifyContext };
+      return {
+        domains: ['coder'],
+        reasoning: 'Empty domains block',
+        graphifyContext,
+        route: undefined,
+        triggerReason: undefined,
+      };
     }
 
     const parsedDomains = domainBlock
@@ -284,7 +325,18 @@ export class TriageAgent {
 
     const reasoningBlock = reasoningMatch?.[1]?.trim() ?? 'No reasoning provided';
 
-    return { domains, reasoning: reasoningBlock, graphifyContext };
+    const complexityMatch = output.match(/#{1,6}\s*Complexity\s*[:\n]([\s\S]*?)(?=#{1,6}|$)/i);
+    const complexity = complexityMatch?.[1]?.trim().toLowerCase();
+
+    const routeInfo = this.detectRoute(task, complexity);
+
+    return {
+      domains,
+      reasoning: reasoningBlock,
+      graphifyContext,
+      route: routeInfo?.route,
+      triggerReason: routeInfo?.triggerReason,
+    };
   }
 
   private writeTriageOutput(task: string, result: TriageResult): void {
@@ -300,6 +352,14 @@ export class TriageAgent {
       '## Reasoning',
       result.reasoning,
     ];
+
+    if (result.route !== undefined) {
+      lines.push('', '## Route', result.route);
+    }
+
+    if (result.triggerReason !== undefined) {
+      lines.push('', '## Trigger Reason', result.triggerReason);
+    }
 
     if (result.graphifyContext !== undefined) {
       lines.push('', '## Graphify Context Used', result.graphifyContext);
@@ -331,5 +391,8 @@ if (isMain) {
   const result = await agent.analyze(task);
 
   process.stdout.write(`Domains: ${result.domains.join(', ')}\n`);
+  if (result.route !== undefined) {
+    process.stdout.write(`Route: ${result.route}\n`);
+  }
   process.stdout.write(`Written: .claude/context/triage_ts.md\n`);
 }

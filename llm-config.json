@@ -6,8 +6,19 @@
     "debugger": "qwen3:32b-q4_K_M",
     "devops": "qwen3:8b",
     "quick-coder": "qwen3:8b",
-    "commit": "qwen3:8b",
+    "commit": "qwen2.5-coder:7b",
     "triage": "qwen3:8b",
     "embedding": "mxbai-embed-large"
+  },
+  "fallback": {
+    "coder": "claude-sonnet-4-6",
+    "reviewer": "claude-sonnet-4-6",
+    "pre-reviewer": "claude-haiku-4-5-20251001",
+    "debugger": "claude-sonnet-4-6",
+    "devops": "claude-haiku-4-5-20251001",
+    "quick-coder": "claude-haiku-4-5-20251001",
+    "commit": "claude-haiku-4-5-20251001",
+    "triage": "claude-haiku-4-5-20251001",
+    "embedding": ""
   }
 }

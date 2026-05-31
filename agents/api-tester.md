@@ -30,3 +30,8 @@ Use the following commands from **`plugins/qa-tools`** when appropriate:
 ## Critical Rule
 
 Always verify the internal state (DB or Cache) after an API call, not just the HTTP response status.
+
+
+## Required Skills
+- skills/humanizer.md
+- skills/api-design-patterns/SKILL.md

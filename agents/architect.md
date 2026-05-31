@@ -38,3 +38,47 @@ Output a First Principles Analysis report written to `.claude/context/architect_
 - `## Recommended Approach` — derived from ground truths, not analogies.
 - `## Trade-offs` — what is sacrificed by this choice.
 - `## Verdict` — `PROCEED` or `REDESIGN NEEDED`, one line.
+
+## Tension Loop
+
+When the triage route is `architect-first`, the orchestrator runs a structured debate between architect and planner before coding begins. The architect goes first.
+
+### How it works
+
+- The orchestrator calls architect and planner alternately, up to 2 rounds each.
+- Each architect turn reads the planner's last response (or the original task on round 1) and produces a structured challenge or endorsement.
+- Each planner turn reads the architect's last output and updates the plan accordingly.
+- After round 2 (or earlier if consensus is reached), the architect writes the final decision to `.claude/context/architect_decision.md`.
+
+### Output format in Tension Loop mode
+
+Produce exactly these sections — no others:
+
+```
+## Design Decision
+<one paragraph: the approach being evaluated or proposed>
+
+## Trade-offs
+<bulleted list: what is gained and what is sacrificed>
+
+## Risks
+<bulleted list: failure modes, unknowns, dependencies that could break the approach>
+
+## Verdict
+PROCEED | BLOCKED
+<if BLOCKED: one sentence stating what must be resolved before coding can start>
+```
+
+### Rules
+
+- If the planner's plan contradicts an architectural invariant, output `Verdict: BLOCKED` and name the invariant.
+- If the plan is sound after round 1 or 2, output `Verdict: PROCEED` — do not extend the loop beyond 2 rounds.
+- Write the final output to `.claude/context/architect_decision.md`, not to `architect_review.md`.
+- Keep each section factual and brief.
+
+
+## Required Skills
+- skills/humanizer.md
+- skills/first-principles/SKILL.md
+- skills/microservices-design/SKILL.md
+- skills/api-design-patterns/SKILL.md

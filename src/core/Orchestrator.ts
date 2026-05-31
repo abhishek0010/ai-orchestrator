@@ -1,7 +1,9 @@
+import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { AgentRunner } from '../agents/AgentRunner.js';
 import { DependencyGraph } from './DependencyGraph.js';
+import { compressDiff } from './DiffCompressor.js';
 import { CODE_GEN_INSTRUCTIONS, parseFileBlocks, writeFilesToProject } from './FileWriter.js';
 import type { AgentDomain, AgentResult, AgentTask } from '../types/index.js';
 
@@ -170,7 +172,29 @@ export class Orchestrator {
   }
 
   /**
+   * Fetches the git diff for the given changed files relative to HEAD.
+   * Returns an empty string if git is unavailable, the list is empty,
+   * or any other error occurs.
+   */
+  private getGitDiff(changedFiles: readonly string[]): string {
+    if (changedFiles.length === 0) return '';
+    try {
+      const fileArgs = changedFiles.map(f => `"${f}"`).join(' ');
+      return execSync(`git diff HEAD -- ${fileArgs}`, {
+        cwd: this.projectRoot,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } catch (err) {
+      process.stderr.write(`[developer-agent] could not fetch git diff: ${String(err)}\n`);
+      return '';
+    }
+  }
+
+  /**
    * Runs reviewer role for each completed domain's output summary.
+   * When changed files are available, fetches and compresses the git diff,
+   * appending it to the review prompt so the reviewer sees actual code changes.
    */
   private async review(results: AgentResult[]): Promise<void> {
     const errors: string[] = [];
@@ -192,7 +216,22 @@ export class Orchestrator {
           return;
         }
 
-        const reviewResult = await this.runner.run('reviewer', outputPath);
+        // Fetch and compress the git diff for the changed files
+        const rawDiff = this.getGitDiff(result.changedFiles);
+        let reviewPromptPath = outputPath;
+
+        if (rawDiff.length > 0) {
+          const { compressed, ratio } = compressDiff(rawDiff);
+          console.log(
+            `[developer-agent] diff compressed for ${result.domain}: ratio=${ratio.toFixed(2)}`,
+          );
+          const summary = readFileSync(outputPath, 'utf8');
+          const diffSection = `\n\n## Git Diff (compressed)\n\`\`\`diff\n${compressed}\n\`\`\`\n`;
+          reviewPromptPath = join(this.contextDir, `review_prompt_${result.domain}.md`);
+          writeFileSync(reviewPromptPath, summary + diffSection, 'utf8');
+        }
+
+        const reviewResult = await this.runner.run('reviewer', reviewPromptPath);
         if (!reviewResult.ok) {
           errors.push(`${result.domain}: ${reviewResult.error}`);
           process.stderr.write(
@@ -207,5 +246,46 @@ export class Orchestrator {
     if (errors.length > 0) {
       throw new Error(`[developer-agent] review failures:\n  ${errors.join('\n  ')}`);
     }
+  }
+
+  /**
+   * Detects conflicting verdicts between two review outputs and logs to conflict_log.md.
+   * Returns true if a conflict was found.
+   */
+  detectConflict(verdictA: string, agentA: string, verdictB: string, agentB: string): boolean {
+    const CONFLICT_PAIRS: ReadonlyArray<readonly [string, string]> = [
+      ['BLOCKED', 'APPROVED'],
+      ['BLOCKED', 'DONE'],
+      ['NEEDS CHANGES', 'APPROVED'],
+    ];
+
+    const upper = (v: string): string => v.toUpperCase().trim();
+    const uA = upper(verdictA);
+    const uB = upper(verdictB);
+
+    const isConflict = CONFLICT_PAIRS.some(
+      ([x, y]) => (uA === x && uB === y) || (uA === y && uB === x),
+    );
+
+    if (isConflict) {
+      const ts = new Date().toISOString();
+      const entry = [
+        `\n## Conflict [${ts}]`,
+        `- Agent A: ${agentA} — ${verdictA}`,
+        `- Agent B: ${agentB} — ${verdictB}`,
+        `- Resolution round result: pending`,
+        `- Final verdict: escalated to user`,
+      ].join('\n');
+
+      const logPath = join(this.contextDir, 'conflict_log.md');
+      const existing = existsSync(logPath) ? readFileSync(logPath, 'utf8') : '# Conflict Log\n';
+      writeFileSync(logPath, existing + entry + '\n', 'utf8');
+
+      process.stderr.write(
+        `[error-coordinator] conflict detected: ${agentA}=${verdictA} vs ${agentB}=${verdictB}\n`,
+      );
+    }
+
+    return isConflict;
   }
 }

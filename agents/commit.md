@@ -44,3 +44,8 @@ If the user asks to commit after `git merge main` or similar, just run the scrip
 - Never generate commit messages or PR descriptions yourself — Ollama handles this via the scripts
 - If a script is not found at `~/.claude/`, try `~/Projects/ai-orchestrator/scripts/` as a fallback
 - If Ollama is not running, tell the user to start it: `ollama serve`
+
+
+## Required Skills
+- skills/humanizer.md
+- skills/git-advanced/SKILL.md

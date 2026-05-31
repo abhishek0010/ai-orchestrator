@@ -7,6 +7,8 @@ OUTPUT_FILE="$HOME/.claude/context/coder_output.md"
 STATS_FILE="$HOME/.claude/token_stats.json"
 INPUT_TOKENS_ARG=""
 OUTPUT_TOKENS_ARG=""
+CACHE_READ_TOKENS_ARG="0"
+CACHE_CREATED_TOKENS_ARG="0"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -16,6 +18,8 @@ while [[ "$#" -gt 0 ]]; do
         --output-file) OUTPUT_FILE="$2"; shift ;;
         --input-tokens) INPUT_TOKENS_ARG="$2"; shift ;;
         --output-tokens) OUTPUT_TOKENS_ARG="$2"; shift ;;
+        --cache-read-tokens) CACHE_READ_TOKENS_ARG="$2"; shift ;;
+        --cache-created-tokens) CACHE_CREATED_TOKENS_ARG="$2"; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
     shift
@@ -55,11 +59,12 @@ else
 fi
 
 # Calculate estimated USD saved (Claude Sonnet pricing: $3/M input, $15/M output)
-# Use jq for float arithmetic
+# Cache reads cost ~0.3¢/M (10x cheaper than regular input)
 SAVED_USD=$(jq -n \
     --argjson input_tokens "$INPUT_TOKENS" \
     --argjson output_tokens "$OUTPUT_TOKENS" \
-    '($input_tokens / 1000000 * 3) + ($output_tokens / 1000000 * 15)' )
+    --argjson cache_read "$CACHE_READ_TOKENS_ARG" \
+    '($input_tokens / 1000000 * 3) + ($output_tokens / 1000000 * 15) + ($cache_read / 1000000 * 2.7)' )
 
 # Ensure stats file exists
 if [ ! -f "$STATS_FILE" ]; then
@@ -77,6 +82,8 @@ jq -n \
     --argjson files_changed "$FILES_COUNT" \
     --argjson input_tokens_est "$INPUT_TOKENS" \
     --argjson output_tokens_est "$OUTPUT_TOKENS" \
+    --argjson cache_read_tokens "$CACHE_READ_TOKENS_ARG" \
+    --argjson cache_created_tokens "$CACHE_CREATED_TOKENS_ARG" \
     --argjson saved_usd_est "$SAVED_USD" \
     '{
         date: $date,
@@ -84,6 +91,8 @@ jq -n \
         files_changed: $files_changed,
         input_tokens_est: $input_tokens_est,
         output_tokens_est: $output_tokens_est,
+        cache_read_tokens: $cache_read_tokens,
+        cache_created_tokens: $cache_created_tokens,
         saved_usd_est: $saved_usd_est
     }' > "$TMP_ENTRY"
 

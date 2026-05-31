@@ -26,7 +26,12 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "postinstall": "echo \"Run 'ai-orchestrator-install' to set up the system.\""
+    "postinstall": "echo \"Run 'ai-orchestrator-install' to set up the system.\"",
+    "ao-commit": "tsx src/cli/commit.ts",
+    "ao-review": "tsx src/cli/review.ts",
+    "ao-stats": "tsx src/cli/stats.ts",
+    "ao-update": "tsx src/cli/update.ts",
+    "ao-mcp": "tsx src/mcp/server.ts"
   },
   "repository": {
     "type": "git",
