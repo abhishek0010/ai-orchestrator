@@ -58,6 +58,7 @@ Detected automatically via indicator files in the project root.
 | `pubspec.yaml` | Flutter/Dart| [flutter-code-standarts.md](../skills/flutter-code-standarts.md) |
 | `Package.swift` | Swift | [swift-code-standarts.md](../skills/swift-code-standarts.md) |
 | `CMakeLists.txt`| C++ | [c-code-standarts.md](../skills/c-code-standarts.md) |
+| `index.html` / `vite.config.*` | Frontend | [frontend-design/SKILL.md](../skills/frontend-design/SKILL.md) |
 | `*.sh` | Bash/Shell | [bash-code-standarts.md](../skills/bash-code-standarts.md) |
 | — | Documentation | [doc-standarts.md](../skills/doc-standarts.md) |
 

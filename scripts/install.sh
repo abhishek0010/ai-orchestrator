@@ -95,6 +95,25 @@ done
 TRIAGE_WRAPPER="$CLAUDE_DIR/triage-agent.sh"
 cat > "$TRIAGE_WRAPPER" <<WRAPPER
 #!/bin/bash
+# Load nvm if npm/npx not in PATH
+if ! command -v npx >/dev/null 2>&1 && [ -s "\$HOME/.nvm/nvm.sh" ]; then
+  # shellcheck source=/dev/null
+  source "\$HOME/.nvm/nvm.sh"
+fi
+if ! command -v npx >/dev/null 2>&1; then
+  echo "❌ Node.js not found. The TypeScript orchestrator requires Node.js." >&2
+  echo "" >&2
+  echo "  Recommended — install via nvm (no sudo required):" >&2
+  echo "    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash" >&2
+  echo "    nvm install --lts" >&2
+  echo "" >&2
+  echo "  Or download from: https://nodejs.org" >&2
+  if command -v open >/dev/null 2>&1; then
+    read -rp "  Open nodejs.org in browser? (Y/n) " _ans
+    [[ -z "\$_ans" || "\$_ans" =~ ^[Yy]$ ]] && open "https://nodejs.org"
+  fi
+  exit 1
+fi
 PROJECT_ROOT="\$(pwd)"
 cd "$REPO_DIR"
 PROJECT_ROOT="\$PROJECT_ROOT" npx tsx src/agents/TriageAgent.ts "\$@"
@@ -105,6 +124,25 @@ echo "  ✓ triage-agent.sh (wraps $REPO_DIR)"
 TS_ORCH_WRAPPER="$CLAUDE_DIR/ts-orchestrator.sh"
 cat > "$TS_ORCH_WRAPPER" <<WRAPPER
 #!/bin/bash
+# Load nvm if npm not in PATH
+if ! command -v npm >/dev/null 2>&1 && [ -s "\$HOME/.nvm/nvm.sh" ]; then
+  # shellcheck source=/dev/null
+  source "\$HOME/.nvm/nvm.sh"
+fi
+if ! command -v npm >/dev/null 2>&1; then
+  echo "❌ Node.js not found. The TypeScript orchestrator requires Node.js." >&2
+  echo "" >&2
+  echo "  Recommended — install via nvm (no sudo required):" >&2
+  echo "    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash" >&2
+  echo "    nvm install --lts" >&2
+  echo "" >&2
+  echo "  Or download from: https://nodejs.org" >&2
+  if command -v open >/dev/null 2>&1; then
+    read -rp "  Open nodejs.org in browser? (Y/n) " _ans
+    [[ -z "\$_ans" || "\$_ans" =~ ^[Yy]$ ]] && open "https://nodejs.org"
+  fi
+  exit 1
+fi
 PROJECT_ROOT="\$(pwd)"
 cd "$REPO_DIR"
 PROJECT_ROOT="\$PROJECT_ROOT" npm start "\$@"
@@ -124,62 +162,55 @@ else
   echo "  WARNING: $SETTINGS_TEMPLATE not found — skipping settings.json generation"
 fi
 
-# Add shell alias
+# ── ~/.local/bin symlinks (work in ALL shells, not just interactive) ──────────
+echo ""
+echo "Setting up ~/.local/bin commands..."
+mkdir -p "$HOME/.local/bin"
+for cmd_script in local-commit open-pr analyze_project stats; do
+  ln -sfn "$CLAUDE_DIR/${cmd_script}.sh" "$HOME/.local/bin/$cmd_script"
+  echo "  ✓ ~/.local/bin/$cmd_script"
+done
+
+# Add ~/.local/bin to PATH — both .zshrc (interactive) and .zprofile (login)
+PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+for rc_file in "$HOME/.zshrc" "$HOME/.zprofile" "$HOME/.bashrc"; do
+  # Create .zprofile if missing (macOS login shells need it)
+  [[ "$rc_file" == "$HOME/.zprofile" ]] && touch "$rc_file"
+  [[ -f "$rc_file" ]] || continue
+  if ! grep -qF '.local/bin' "$rc_file" 2>/dev/null; then
+    printf '\n%s\n' "$PATH_LINE" >> "$rc_file"
+    echo "  ✓ PATH updated in $(basename "$rc_file")"
+  else
+    echo "  ✓ ~/.local/bin already in $(basename "$rc_file")"
+  fi
+done
+
+# ── Shell aliases (for tab-completion friendliness in interactive shells) ─────
 SHELL_RC="$HOME/.zshrc"
-if [[ "$SHELL" == */bash ]]; then
-  SHELL_RC="$HOME/.bashrc"
-fi
+[[ "$SHELL" == */bash ]] && SHELL_RC="$HOME/.bashrc"
 
 ALIAS_LINE="alias commit='claude -p \"stage all changes and commit\" --agent commit --model haiku --allowedTools \"Bash\"'"
-
 if grep -q "alias commit=" "$SHELL_RC" 2>/dev/null; then
   echo "  ✓ alias commit already exists in $SHELL_RC"
 else
-{
-  echo ""
-  echo "# ai-orchestrator aliases"
-  echo "$ALIAS_LINE"
-} >> "$SHELL_RC"
+  { echo ""; echo "# ai-orchestrator aliases"; echo "$ALIAS_LINE"; } >> "$SHELL_RC"
   echo "  ✓ alias commit added"
 fi
 
 for alias_cmd in "local-commit" "open-pr" "analyze_project" "stats"; do
   if ! grep -q "alias $alias_cmd=" "$SHELL_RC" 2>/dev/null; then
-    echo "alias $alias_cmd='~/.claude/$alias_cmd.sh'" >> "$SHELL_RC"
+    echo "alias $alias_cmd='~/.claude/${alias_cmd}.sh'" >> "$SHELL_RC"
     echo "  ✓ alias $alias_cmd added to $SHELL_RC"
   fi
 done
 
 # Make helper scripts executable
-if [[ -f "$REPO_DIR/scripts/call_ollama.sh" ]]; then
-  chmod +x "$REPO_DIR/scripts/call_ollama.sh"
-  echo "  ✓ call_ollama.sh is executable"
-fi
-
-if [[ -f "$REPO_DIR/scripts/local-commit.sh" ]]; then
-  chmod +x "$REPO_DIR/scripts/local-commit.sh"
-  echo "  ✓ local-commit.sh is executable"
-fi
-
-if [[ -f "$REPO_DIR/scripts/open-pr.sh" ]]; then
-  chmod +x "$REPO_DIR/scripts/open-pr.sh"
-  echo "  ✓ open-pr.sh is executable"
-fi
-
-if [[ -f "$REPO_DIR/scripts/analyze_project.sh" ]]; then
-  chmod +x "$REPO_DIR/scripts/analyze_project.sh"
-  echo "  ✓ analyze_project.sh is executable"
-fi
-
-if [[ -f "$REPO_DIR/scripts/track_savings.sh" ]]; then
-  chmod +x "$REPO_DIR/scripts/track_savings.sh"
-  echo "  ✓ track_savings.sh is executable"
-fi
-
-if [[ -f "$REPO_DIR/scripts/stats.sh" ]]; then
-  chmod +x "$REPO_DIR/scripts/stats.sh"
-  echo "  ✓ stats.sh is executable"
-fi
+for script in call_ollama.sh local-commit.sh open-pr.sh analyze_project.sh track_savings.sh stats.sh markdown_review.sh shellcheck.sh; do
+  if [[ -f "$REPO_DIR/scripts/$script" ]]; then
+    chmod +x "$REPO_DIR/scripts/$script"
+    echo "  ✓ $script is executable"
+  fi
+done
 
 
 # Install git hooks into the ai-orchestrator repo itself
@@ -268,6 +299,56 @@ fi
 echo ""
 bash "$REPO_DIR/scripts/analyze_hardware.sh"
 
+# ── npm install (TypeScript orchestrator dependencies) ────────────────────────
+echo ""
+echo "Installing TypeScript dependencies..."
+_npm=""
+if command -v npm >/dev/null 2>&1; then
+  _npm="npm"
+elif [ -s "$HOME/.nvm/nvm.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$HOME/.nvm/nvm.sh"
+  command -v npm >/dev/null 2>&1 && _npm="npm"
+fi
+
+if [ -n "$_npm" ]; then
+  (cd "$REPO_DIR" && npm install --silent 2>&1) && echo "  ✓ npm dependencies installed" \
+    || echo "  ⚠ npm install failed — check $REPO_DIR manually"
+else
+  echo "  ⚠ npm not found — skipping. Run 'npm install' in $REPO_DIR after installing Node.js"
+  echo "    Install Node.js via nvm: https://github.com/nvm-sh/nvm"
+fi
+
+# ── Pull required Ollama models ───────────────────────────────────────────────
+echo ""
+echo "Checking Ollama models..."
+if command -v ollama >/dev/null 2>&1 && curl -s --max-time 2 http://localhost:11434/api/tags >/dev/null 2>&1; then
+  OLLAMA_MODELS=$(jq -r '.models | to_entries[] | .value' "$REPO_CONFIG" 2>/dev/null \
+    | grep -v '^claude-' | grep -v '^hf\.co/' | grep -v '^$' | sort -u)
+  INSTALLED_MODELS=$(ollama list 2>/dev/null | awk 'NR>1 {print $1}')
+  for model in $OLLAMA_MODELS; do
+    if echo "$INSTALLED_MODELS" | grep -qF "$model"; then
+      echo "  ✓ $model already installed"
+    else
+      echo "  Pulling $model..."
+      ollama pull "$model" && echo "  ✓ $model pulled" || echo "  ⚠ Failed to pull $model"
+    fi
+  done
+elif command -v ollama >/dev/null 2>&1; then
+  echo "  ⚠ Ollama installed but not running — start Ollama and re-run install to pull models"
+else
+  echo "  ⚠ Ollama not installed — skipping model pull"
+fi
+
+# ── ANTHROPIC_API_KEY check ───────────────────────────────────────────────────
+echo ""
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  echo "  ⚠ ANTHROPIC_API_KEY is not set — Claude API fallback will not work."
+  echo "    Add to your shell: export ANTHROPIC_API_KEY=sk-ant-..."
+else
+  echo "  ✓ ANTHROPIC_API_KEY is set"
+fi
+
 echo ""
 echo "🔍 Running initial project analysis..."
 bash "$REPO_DIR/scripts/analyze_project.sh"
@@ -275,5 +356,7 @@ bash "$REPO_DIR/scripts/analyze_project.sh"
 echo ""
 echo "Setup complete! To use orchestrator rules in your project, copy ~/.claude/ai_rules.md to your project root."
 echo "Example: cp ~/.claude/ai_rules.md ~/Projects/my-app/ai_rules.md"
+echo ""
+echo "  💡 Open a new terminal (or run: source ~/.zshrc) to activate PATH changes."
 echo ""
 bash "$REPO_DIR/scripts/check-update.sh"

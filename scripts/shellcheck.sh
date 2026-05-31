@@ -20,6 +20,11 @@ cd "$ROOT_DIR" || { echo "❌ Failed to cd to $ROOT_DIR"; exit 1; }
 
 echo "Checking shell scripts..."
 
+if ! command -v shellcheck >/dev/null 2>&1; then
+    echo "  - shellcheck not installed, skipping."
+    exit 0
+fi
+
 # Find files to check
 if [[ "$1" == "--all" ]]; then
     echo "  [Mode: All files]"

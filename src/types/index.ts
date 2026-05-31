@@ -34,8 +34,17 @@ export type LlmConfig = {
   readonly models: Record<string, string>;
 };
 
+export type TriageRoute =
+  | 'direct-edit'
+  | 'quick-coder'
+  | 'plugin-route'
+  | 'full-pipeline'
+  | 'architect-first';
+
 export type TriageResult = {
   readonly domains: readonly AgentDomain[];
   readonly reasoning: string;
   readonly graphifyContext: string | undefined;
+  readonly route: TriageRoute | undefined;
+  readonly triggerReason: string | undefined;
 };

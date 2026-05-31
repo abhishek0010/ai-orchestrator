@@ -31,8 +31,8 @@ if [ -f .git/MERGE_HEAD ]; then
     echo -e "\nMerge commit message:"
     echo -e "\033[1;33m${MERGE_MSG}\033[0m\n"
 
-    read -rp "Commit merge? (y/N) " confirm
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    read -rp "Commit merge? (Y/N) " confirm
+    if [[ -z "$confirm" || "$confirm" =~ ^[Yy]$ ]]; then
         git commit --no-edit
 
         # Update CHANGELOG if git-cliff and config are available.
@@ -59,6 +59,28 @@ fi
 
 echo "Staging all changes (git add -A)..."
 git add -A
+
+# Quality gates (pr-checkmate.json)
+CHECKMATE="$SCRIPT_DIR/../pr-checkmate.json"
+SKIP_GATES=false
+for arg in "$@"; do [ "$arg" = "--skip-gates" ] && SKIP_GATES=true; done
+
+if [ "$SKIP_GATES" = false ] && [ -f "$CHECKMATE" ]; then
+    GATE_NAMES=$(python3 -c "import json; d=json.load(open('$CHECKMATE')); [print(g['name']+'|'+g['command']+'|'+g['failMessage']+'|'+str(g['optional'])) for g in d['gates']]" 2>/dev/null)
+    while IFS='|' read -r gname gcmd gmsg gopt; do
+        [ -z "$gname" ] && continue
+        RESULT=$(eval "$gcmd" 2>&1)
+        EXIT=$?
+        if [ $EXIT -ne 0 ] || [ -n "$RESULT" ]; then
+            echo "[gate: $gname] $gmsg"
+            [ -n "$RESULT" ] && echo "$RESULT"
+            if [ "$gopt" = "False" ]; then
+                echo "Gate '$gname' failed. Use --skip-gates to bypass."
+                exit 1
+            fi
+        fi
+    done <<< "$GATE_NAMES"
+fi
 
 # Proactive reviews
 [ -f "$SCRIPT_DIR/markdown_review.sh" ] && bash "$SCRIPT_DIR/markdown_review.sh"
@@ -119,8 +141,8 @@ echo -e "\nProposed commit message:"
 echo -e "\033[1;32m$MESSAGE\033[0m\n"
 
 # Prompt the user for confirmation
-read -rp "Commit with this message? (y/N) " confirm
-if [[ "$confirm" =~ ^[Yy]$ ]]; then
+read -rp "Commit with this message? (Y/n) " confirm
+if [[ -z "$confirm" || "$confirm" =~ ^[Yy]$ ]]; then
     git commit -m "$MESSAGE"
 
     # Update CHANGELOG if git-cliff and config are available

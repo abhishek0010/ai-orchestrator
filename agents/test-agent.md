@@ -149,3 +149,7 @@ Tests run: <N> | Passed: <N> | Failed: <N>
 FAILURES (if any):
 - <test name>: <error summary>
 ```markdown
+
+
+## Required Skills
+- skills/humanizer.md

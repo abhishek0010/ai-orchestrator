@@ -14,6 +14,14 @@ Analyze a coding task, explore the codebase, and write a **context file** to dis
 
 ### Phase 0 — Load Project Overview (fast path)
 
+**Knowledge index (cross-project context):** Before reading project_overview.md, check if a knowledge index exists:
+
+```bash
+ls knowledge/context-index.md 2>/dev/null
+```
+
+If it exists, read it immediately. It contains: related repos, cross-repo dependencies, architectural decisions, and known constraints. Use it to avoid wrong assumptions about shared code or external systems. Do not re-read it in later phases.
+
 Before any exploration, check if `.claude/context/project_overview.md` exists and if an automated delta report is available:
 
 ```bash
@@ -34,6 +42,19 @@ For every file listed in `## Key Files` of the overview: if the file appears in 
 **If `analysis_delta.md` EXISTS** — read it as well. It contains findings from an automated scan (new files, patterns).
 
 - **Action**: Merge relevant delta findings into your mental model and prepare to update the main overview in Phase 4.
+
+**architect_decision.md gate**: After loading the project overview, check whether `.claude/context/architect_decision.md` exists:
+
+```bash
+ls .claude/context/architect_decision.md 2>/dev/null
+```
+
+**If it exists** — read it in full. Then:
+
+- If the file contains the exact line `Verdict: BLOCKED` — stop immediately. Do not proceed to Phase 1 or write any context file. Output the blocking reason from the `## Verdict` section to the user and exit.
+- If the file contains `Verdict: PROCEED` — continue normally. Incorporate the content of `## Design Decision` and `## Trade-offs` from the file into `task_context.md` under a new section `## Architect Decision` (placed after `## Task`, before `## Plan`).
+
+**If it does not exist** — proceed normally; no action needed.
 
 **Workflow adjustments with Overview:**
 
@@ -147,6 +168,9 @@ Write exactly this structure to `.claude/context/task_context.md`:
 ## Task
 <one sentence description of what needs to be done>
 
+## Architect Decision
+<if .claude/context/architect_decision.md exists and contains Verdict: PROCEED, paste the ## Design Decision and ## Trade-offs sections here; otherwise omit this section>
+
 ## Plan
 - <step 1>
 - <step 2>
@@ -250,3 +274,7 @@ wc -c .claude/context/task_context.md
 - Create the `.claude/context/` directory if it does not exist: `mkdir -p .claude/context`
 - Never propose mocking Ollama in tests: the system relies on real local model responses.
 - Keep the plan minimal — only what is directly needed for the task
+
+
+## Required Skills
+- skills/humanizer.md

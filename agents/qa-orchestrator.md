@@ -30,3 +30,7 @@ Use the following commands from **`plugins/qa-tools`** when appropriate:
 ## Critical Rule
 
 You are the final gatekeeper. If a fix implements the functionality but breaks existing tests, you MUST reject the change and revert to the planning phase.
+
+
+## Required Skills
+- skills/humanizer.md

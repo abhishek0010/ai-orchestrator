@@ -23,6 +23,17 @@ fi
 
 echo "Checking staged markdown files..."
 
+if ! command -v npx >/dev/null 2>&1; then
+    echo "  - npx not found, skipping markdown lint."
+    exit 0
+fi
+
+# Require markdownlint-cli2 to be installed locally — never let npx download it
+if ! npx --no-install markdownlint-cli2 --version >/dev/null 2>&1; then
+    echo "  - markdownlint-cli2 not installed, skipping. Run: npm i -D markdownlint-cli2"
+    exit 0
+fi
+
 fix_with_ollama() {
     local file="$1"
     local errors="$2"
@@ -46,19 +57,16 @@ $file_content
 EOF
 
     local prompt
-    prompt=$(cat <<'EOF'
-You are a markdown expert. Fix the reported markdownlint errors in the file provided in context.
+    prompt="You are a markdown expert. Fix the reported markdownlint errors in the file provided in context.
 
 Common fixes required:
-- MD040: Fenced code blocks must have a language specifier. Add an appropriate language (e.g. ```bash, ```json, ```text, ```typescript, ```python, ```yaml, ```sh) after the opening ```. Use ```text for plain output/examples with no programming language.
+- MD040: Fenced code blocks must have a language specifier. Add an appropriate language (e.g. bash, json, text, typescript, python, yaml, sh) after the opening fence. Use 'text' for plain output/examples with no programming language.
 
 CRITICAL RULES:
 - Return the FULL corrected file content with ALL fixes applied.
 - Preserve ALL existing content, structure, code blocks, and formatting exactly.
 - Do NOT add, remove, or reword any content beyond what is required to fix the lint errors.
-- Return ONLY the raw file content. No explanations, no surrounding markdown fences, no preamble.
-EOF
-)
+- Return ONLY the raw file content. No explanations, no surrounding markdown fences, no preamble."
 
     local fixed_content
     fixed_content=$("$CALL_OLLAMA" --role coder --prompt "$prompt" --context-file "$tmp_context")
@@ -84,11 +92,11 @@ for file in $STAGED_MD_FILES; do
     echo "  Linting $file..."
 
     # 1. Auto-fix what markdownlint-cli2 can fix automatically
-    npx markdownlint-cli2 --fix "$file" > /dev/null 2>&1 || true
+    npx --no-install markdownlint-cli2 --fix "$file" > /dev/null 2>&1 || true
     git add "$file"
 
     # 2. Check for remaining errors after auto-fix
-    LINT_ERRORS=$(npx markdownlint-cli2 "$file" 2>&1 || true)
+    LINT_ERRORS=$(npx --no-install markdownlint-cli2 "$file" 2>&1 || true)
 
     if [ -n "$LINT_ERRORS" ]; then
         echo "  Remaining errors in $file:"
@@ -97,7 +105,7 @@ for file in $STAGED_MD_FILES; do
         # 3. Ask Ollama to fix what auto-fix couldn't handle (e.g. MD040)
         if fix_with_ollama "$file" "$LINT_ERRORS"; then
             # 4. Final verification
-            if npx markdownlint-cli2 "$file" > /dev/null 2>&1; then
+            if npx --no-install markdownlint-cli2 "$file" > /dev/null 2>&1; then
                 echo "  ✅ $file — all errors resolved."
             else
                 echo "  ⚠ $file still has errors after Ollama fix."

@@ -1,13 +1,24 @@
 {
   "models": {
-    "coder": "hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS",
-    "reviewer": "qwen2.5-coder:7b",
-    "pre-reviewer": "qwen2.5-coder:7b",
-    "debugger": "qwen2.5-coder:7b",
-    "devops": "qwen2.5-coder:7b",
-    "quick-coder": "qwen2.5-coder:7b",
+    "coder": "qwen3:32b-q4_K_M",
+    "reviewer": "qwen3:32b-q4_K_M",
+    "pre-reviewer": "qwen3:8b",
+    "debugger": "qwen3:32b-q4_K_M",
+    "devops": "qwen3:8b",
+    "quick-coder": "qwen3:8b",
     "commit": "qwen2.5-coder:7b",
-    "triage": "llama3.1:8b",
+    "triage": "qwen3:8b",
     "embedding": "mxbai-embed-large"
+  },
+  "fallback": {
+    "coder": "claude-sonnet-4-6",
+    "reviewer": "claude-sonnet-4-6",
+    "pre-reviewer": "claude-haiku-4-5-20251001",
+    "debugger": "claude-sonnet-4-6",
+    "devops": "claude-haiku-4-5-20251001",
+    "quick-coder": "claude-haiku-4-5-20251001",
+    "commit": "claude-haiku-4-5-20251001",
+    "triage": "claude-haiku-4-5-20251001",
+    "embedding": ""
   }
 }

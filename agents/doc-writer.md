@@ -131,3 +131,8 @@ rm -f /tmp/.doc_writer_active
   - Disabled rules (do NOT enforce): MD013 (line length), MD033 (inline HTML), MD036 (bold-as-heading), MD041 (first heading), MD060
 - After writing any `.md` file, run `markdownlint-cli2 "<file>"` to verify — fix any errors before reporting done
 - Do not rewrite sections that were not part of the task
+
+
+## Required Skills
+- skills/humanizer.md
+- skills/doc-standarts.md
