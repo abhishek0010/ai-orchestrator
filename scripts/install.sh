@@ -101,7 +101,17 @@ if ! command -v npx >/dev/null 2>&1 && [ -s "\$HOME/.nvm/nvm.sh" ]; then
   source "\$HOME/.nvm/nvm.sh"
 fi
 if ! command -v npx >/dev/null 2>&1; then
-  echo "❌ npx not found. Install Node.js: https://github.com/nvm-sh/nvm" >&2
+  echo "❌ Node.js not found. The TypeScript orchestrator requires Node.js." >&2
+  echo "" >&2
+  echo "  Recommended — install via nvm (no sudo required):" >&2
+  echo "    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash" >&2
+  echo "    nvm install --lts" >&2
+  echo "" >&2
+  echo "  Or download from: https://nodejs.org" >&2
+  if command -v open >/dev/null 2>&1; then
+    read -rp "  Open nodejs.org in browser? (Y/n) " _ans
+    [[ -z "\$_ans" || "\$_ans" =~ ^[Yy]$ ]] && open "https://nodejs.org"
+  fi
   exit 1
 fi
 PROJECT_ROOT="\$(pwd)"
@@ -120,7 +130,17 @@ if ! command -v npm >/dev/null 2>&1 && [ -s "\$HOME/.nvm/nvm.sh" ]; then
   source "\$HOME/.nvm/nvm.sh"
 fi
 if ! command -v npm >/dev/null 2>&1; then
-  echo "❌ npm not found. Install Node.js: https://github.com/nvm-sh/nvm" >&2
+  echo "❌ Node.js not found. The TypeScript orchestrator requires Node.js." >&2
+  echo "" >&2
+  echo "  Recommended — install via nvm (no sudo required):" >&2
+  echo "    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash" >&2
+  echo "    nvm install --lts" >&2
+  echo "" >&2
+  echo "  Or download from: https://nodejs.org" >&2
+  if command -v open >/dev/null 2>&1; then
+    read -rp "  Open nodejs.org in browser? (Y/n) " _ans
+    [[ -z "\$_ans" || "\$_ans" =~ ^[Yy]$ ]] && open "https://nodejs.org"
+  fi
   exit 1
 fi
 PROJECT_ROOT="\$(pwd)"
