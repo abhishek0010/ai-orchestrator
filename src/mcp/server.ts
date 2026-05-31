@@ -99,7 +99,6 @@ function handleRunPipeline(prompt: string): unknown {
   spawnSync('bash', [OLLAMA_SCRIPT, '--role', 'coder', '--prompt-file', tmp], {
     encoding: 'utf8',
     timeout: 300_000,
-    detached: false,
   });
   return { started: true, message: 'Pipeline run completed (synchronous)' };
 }

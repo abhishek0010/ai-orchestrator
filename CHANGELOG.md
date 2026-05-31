@@ -1,10 +1,22 @@
 # Changelog
 
 All notable changes to ai-orchestrator.
-## [unreleased]
+## v1.0.18 — 2026-05-31
+### 2026-05-31
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`ff4d786`](https://github.com/Mybono/ai-orchestrator/commit/ff4d786) Update project overview and documentation
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`b549e3b`](https://github.com/Mybono/ai-orchestrator/commit/b549e3b) Update (#39)
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`4bc27d5`](https://github.com/Mybono/ai-orchestrator/commit/4bc27d5) Improve installation instructions for Node.js
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`fc64fec`](https://github.com/Mybono/ai-orchestrator/commit/fc64fec) Ensure nvm is loaded in wrappers and improve commit prompts
+- ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`8430cf2`](https://github.com/Mybono/ai-orchestrator/commit/8430cf2) Update project with new features and improvements
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`e5c3bb2`](https://github.com/Mybono/ai-orchestrator/commit/e5c3bb2) Ignore graphify cache, update model config to Qwen 3
+### 2026-05-08
+- ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`495ec61`](https://github.com/Mybono/ai-orchestrator/commit/495ec61) Add pipeline diagram and Gemini-generated images
 ### 2026-05-04
 - ![refactor](https://img.shields.io/badge/refactor-e4e669?style=flat-square) [`f49e05e`](https://github.com/Mybono/ai-orchestrator/commit/f49e05e089a7bfd67d45557425a56008cde5a556) Remove trailing newline
 - ![chore](https://img.shields.io/badge/chore-cfd3d7?style=flat-square) [`44cc9cf`](https://github.com/Mybono/ai-orchestrator/commit/44cc9cfbc9e8b95f137f0fabfb4e02c4262133bf) Sync changelog after merge
+### 2026-04-19
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`4f17859`](https://github.com/Mybono/ai-orchestrator/commit/4f17859) Implement file writing for developer output (#37)
+- ![feat](https://img.shields.io/badge/feat-0075ca?style=flat-square) [`8d54388`](https://github.com/Mybono/ai-orchestrator/commit/8d54388) Introduce file writing to project for code generation results (#36)
 
 ## v1.0.17 — 2026-04-17
 ### 2026-04-17
