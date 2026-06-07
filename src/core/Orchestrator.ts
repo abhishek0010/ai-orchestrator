@@ -24,6 +24,8 @@ const DOMAIN_DEPENDENCIES: Record<AgentDomain, readonly AgentDomain[]> = {
   devops: ['coder', 'unit-tester', 'doc-writer'],
 };
 
+const NEEDS_CHANGES_RE = /NEEDS[\s_]CHANGES/i;
+
 export class Orchestrator {
   private readonly runner: AgentRunner | ExoRunner | DistributedRunner;
   private readonly contextDir: string;
@@ -64,6 +66,7 @@ export class Orchestrator {
    * Reads pre-written task_context_<domain>.md files from contextDir,
    * builds the dependency graph, executes in topological order,
    * writes generated files directly to the project, then reviews.
+   * If review finds failures, runs one fix round and re-reviews.
    */
   async run(domains: AgentDomain[]): Promise<OrchestratorResult> {
     if (domains.length === 0) {
@@ -74,8 +77,35 @@ export class Orchestrator {
     console.log(`[developer-agent] domains: ${domains.join(', ')}`);
 
     const tasks = this.buildTasks(domains);
-    const agentResults = await this.execute(tasks);
+    let agentResults = await this.execute(tasks);
     const reviewOutcome = await this.review(agentResults);
+
+    if (!reviewOutcome.passed) {
+      const failedDomains = reviewOutcome.failedDomains;
+      process.stderr.write(
+        `[developer-agent] fix round: re-running ${[...failedDomains].join(', ')}\n`,
+      );
+
+      // Append reviewer feedback to each failed domain's context file
+      for (const domain of failedDomains) {
+        const failedResult = agentResults.find(r => r.domain === domain);
+        this.appendReviewFeedback(domain, failedResult?.contextFile);
+      }
+
+      // Re-build and re-execute only the failed domains
+      const fixTasks = this.buildTasks([...failedDomains]);
+      const fixResults = await this.execute(fixTasks);
+
+      // Merge fix results into agentResults (replace by domain)
+      const fixResultMap = new Map(fixResults.map(r => [r.domain, r]));
+      agentResults = agentResults.map(r =>
+        fixResultMap.has(r.domain) ? (fixResultMap.get(r.domain) as AgentResult) : r,
+      );
+
+      // Re-review only the domains that were re-run
+      const fixReviewOutcome = await this.review(fixResults);
+      return { agentResults, reviewOutcome: fixReviewOutcome };
+    }
 
     return { agentResults, reviewOutcome };
   }
@@ -229,8 +259,9 @@ export class Orchestrator {
 
   /**
    * Runs reviewer for each completed domain.
-   * Returns ReviewOutcome instead of throwing — the caller decides how to
-   * handle review failures separately from build failures or internal errors.
+   * Saves reviewer output to review_output_{domain}.md for the fix round.
+   * Marks a domain as failed if the runner errors OR output contains NEEDS CHANGES.
+   * Returns ReviewOutcome instead of throwing.
    */
   private async review(results: AgentResult[]): Promise<ReviewOutcome> {
     const failedDomains: AgentDomain[] = [];
@@ -268,10 +299,21 @@ export class Orchestrator {
         }
 
         const reviewResult = await this.runner.run('reviewer', reviewPromptPath);
+
+        // Always persist the review output for the fix round
+        const savedOutput = reviewResult.ok ? reviewResult.output : '';
+        const reviewOutputPath = join(this.contextDir, `review_output_${result.domain}.md`);
+        writeFileSync(reviewOutputPath, savedOutput, 'utf8');
+
         if (!reviewResult.ok) {
           failedDomains.push(result.domain);
           process.stderr.write(
             `[developer-agent] review failed for ${result.domain}: ${reviewResult.error}\n`,
+          );
+        } else if (NEEDS_CHANGES_RE.test(reviewResult.output)) {
+          failedDomains.push(result.domain);
+          process.stderr.write(
+            `[developer-agent] review for ${result.domain}: NEEDS CHANGES — queued for fix round\n`,
           );
         } else {
           console.log(`[developer-agent] reviewed ${result.domain}: ok`);
@@ -282,6 +324,45 @@ export class Orchestrator {
     return failedDomains.length > 0
       ? { passed: false, failedDomains }
       : { passed: true };
+  }
+
+  /**
+   * Reads the saved review output for a domain and appends it to the domain's
+   * context file so the coder receives reviewer feedback in the fix round.
+   */
+  private appendReviewFeedback(domain: AgentDomain, contextFile: string | undefined): void {
+    if (contextFile === undefined) return;
+
+    const reviewOutputPath = join(this.contextDir, `review_output_${domain}.md`);
+    if (!existsSync(reviewOutputPath)) {
+      process.stderr.write(
+        `[developer-agent] no review output found for ${domain} — skipping feedback append\n`,
+      );
+      return;
+    }
+
+    let reviewOutput: string;
+    try {
+      reviewOutput = readFileSync(reviewOutputPath, 'utf8');
+    } catch (err) {
+      process.stderr.write(
+        `[developer-agent] could not read review output for ${domain}: ${String(err)}\n`,
+      );
+      return;
+    }
+
+    const feedback =
+      `\n\n---\n\n## Reviewer Feedback (Fix Round)\n\n${reviewOutput}\n\n` +
+      `**Address all reviewer comments in your implementation.**\n`;
+
+    try {
+      const existing = readFileSync(contextFile, 'utf8');
+      writeFileSync(contextFile, existing + feedback, 'utf8');
+    } catch (err) {
+      process.stderr.write(
+        `[developer-agent] could not append feedback to ${contextFile}: ${String(err)}\n`,
+      );
+    }
   }
 
   /**

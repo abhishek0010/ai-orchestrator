@@ -6,6 +6,8 @@ import type { ClusterConfig, ClusterNode, Role, RunResult } from '../types/index
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const FALLBACK_HOST = 'localhost';
 const FALLBACK_PORT = 11434;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
 
 /**
  * Inference runner that dispatches each role to the first matching cluster node.
@@ -26,7 +28,7 @@ export class DistributedRunner {
 
   /**
    * Routes the request to the first cluster node that lists `role` in its roles map.
-   * Falls back to localhost:11434 + model from llm-config.json if no node matches.
+   * Retries up to MAX_RETRIES times on transient failure.
    * Returns RunResult — never throws.
    */
   async run(role: Role, promptFile: string, contextFile?: string): Promise<RunResult> {
@@ -38,6 +40,28 @@ export class DistributedRunner {
       return { ok: false, error: `context file not found: ${contextFile}` };
     }
 
+    let lastResult: RunResult = { ok: false, error: 'no attempts made' };
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        process.stderr.write(
+          `[distributed-runner] retry ${attempt}/${MAX_RETRIES} for role="${role}"\n`,
+        );
+        await new Promise<void>(r => setTimeout(r, attempt * RETRY_DELAY_MS));
+      }
+      lastResult = await this.runOnce(role, promptFile, contextFile);
+      if (lastResult.ok) return lastResult;
+    }
+
+    return lastResult;
+  }
+
+  /**
+   * Single attempt: resolves node, reads prompt/context, calls the node API.
+   * Falls back to localhost:11434 + model from llm-config.json if no node matches.
+   * Returns RunResult — never throws.
+   */
+  private async runOnce(role: Role, promptFile: string, contextFile?: string): Promise<RunResult> {
     const systemPrompt = this.readSystemPrompt(role);
     if (systemPrompt === null) {
       return { ok: false, error: `system prompt not found for role: ${role}` };

@@ -10,6 +10,17 @@
     "triage": "qwen3:8b",
     "embedding": "mxbai-embed-large"
   },
+  "max_tokens": {
+    "coder": 16384,
+    "debugger": 16384,
+    "reviewer": 8192,
+    "planner": 8192,
+    "quick-coder": 8192,
+    "pre-reviewer": 4096,
+    "commit": 2048,
+    "triage": 2048,
+    "default": 4096
+  },
   "free_api_url": "http://localhost:3001/v1/chat/completions",
   "free_api": {
     "planner": "qwen/qwen3-32b",

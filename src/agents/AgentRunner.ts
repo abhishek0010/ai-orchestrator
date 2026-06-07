@@ -8,6 +8,8 @@ const CALL_OLLAMA_SCRIPT = join(homedir(), '.claude', 'call_ollama.sh');
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_OUTPUT_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
 
 export class AgentRunner {
   private readonly callOllamaScript: string;
@@ -23,15 +25,34 @@ export class AgentRunner {
   }
 
   /**
-   * Calls call_ollama.sh with the given role and a prompt file path.
-   * Optionally passes a context file.
-   * Returns stdout on success or error message on failure.
+   * Calls call_ollama.sh with up to MAX_RETRIES retries on failure.
+   * Sleeps attempt * RETRY_DELAY_MS ms between attempts.
+   * Returns { ok: false } immediately if the prompt file is missing.
    */
-  run(role: Role, promptFile: string, contextFile?: string): Promise<RunResult> {
+  async run(role: Role, promptFile: string, contextFile?: string): Promise<RunResult> {
     if (!existsSync(promptFile)) {
-      return Promise.resolve({ ok: false, error: `prompt file not found: ${promptFile}` });
+      return { ok: false, error: `prompt file not found: ${promptFile}` };
     }
 
+    let lastResult: RunResult = { ok: false, error: 'no attempts made' };
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        process.stderr.write(`[agent-runner] retry ${attempt}/${MAX_RETRIES} for role="${role}"\n`);
+        await new Promise<void>(r => setTimeout(r, attempt * RETRY_DELAY_MS));
+      }
+      lastResult = await this.runOnce(role, promptFile, contextFile);
+      if (lastResult.ok) return lastResult;
+    }
+
+    return lastResult;
+  }
+
+  /**
+   * Single attempt: spawns call_ollama.sh and collects stdout/stderr.
+   * Returns stdout on success or error message on failure.
+   */
+  private runOnce(role: Role, promptFile: string, contextFile?: string): Promise<RunResult> {
     const args: string[] = [this.callOllamaScript, '--role', role, '--prompt-file', promptFile];
 
     if (contextFile !== undefined) {

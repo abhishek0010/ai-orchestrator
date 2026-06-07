@@ -66,6 +66,13 @@ if [ -z "$SELECTED_MODEL" ] || [ "$SELECTED_MODEL" = "null" ]; then
     esac
 fi
 
+# Resolve MAX_TOKENS from per-role config, fallback to 4096
+MAX_TOKENS=4096
+if [ -n "$ROLE" ] && [ -f "$CONFIG_FILE" ]; then
+    _MT=$(jq -r --arg role "$ROLE" '(.max_tokens[$role] // .max_tokens.default // 4096)' "$CONFIG_FILE")
+    MAX_TOKENS="${_MT:-4096}"
+fi
+
 # Detect cloud-first roles (planner/reviewer/debugger try Cerebras before Ollama)
 IS_CLOUD_FIRST=false
 if [ -n "$ROLE" ] && [ -f "$CONFIG_FILE" ]; then
@@ -99,6 +106,57 @@ RESPONSE_CONTENT=""
 RESPONSE=""
 OLLAMA_EXIT=1
 
+# _call_cerebras_api <model>
+# Globals read:  TMP_PROMPT, TMP_CONTEXT, MAX_TOKENS, CEREBRAS_API_KEY
+# Global set:    RESPONSE_CONTENT (non-empty string on success)
+# Returns:       0 on success, 1 on failure
+_call_cerebras_api() {
+    local _cer_model="$1"
+    local _tmp_payload
+    _tmp_payload=$(mktemp)
+
+    jq -n \
+      --arg model "$_cer_model" \
+      --rawfile prompt "$TMP_PROMPT" \
+      --rawfile context "$TMP_CONTEXT" \
+      --argjson max_tokens "$MAX_TOKENS" \
+      'if ($context | rtrimstr("\n") | length) > 0 then {
+        model: $model,
+        max_tokens: $max_tokens,
+        messages: [
+          {role: "system", content: ("You are an expert AI assistant. Output ONLY the response requested.\n\n" + $context)},
+          {role: "user", content: $prompt}
+        ]
+      } else {
+        model: $model,
+        max_tokens: $max_tokens,
+        messages: [
+          {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
+          {role: "user", content: $prompt}
+        ]
+      } end' > "$_tmp_payload"
+
+    local _cer_response
+    _cer_response=$(curl -s --max-time 120 -X POST "https://api.cerebras.ai/v1/chat/completions" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer ${CEREBRAS_API_KEY}" \
+      -d @"$_tmp_payload")
+    local _cer_exit=$?
+    rm -f "$_tmp_payload"
+
+    if [ "$_cer_exit" -eq 0 ]; then
+        RESPONSE_CONTENT=$(echo "$_cer_response" | jq -r '.choices[0].message.content // empty')
+    fi
+
+    if [ -n "$RESPONSE_CONTENT" ]; then
+        echo "[cerebras] ${_cer_model} — OK" >&2
+        return 0
+    else
+        echo "[cerebras] no response — will try next" >&2
+        return 1
+    fi
+}
+
 # === CLOUD-FIRST: Cerebras before Ollama for planner/reviewer/debugger ===
 if [ "$IS_CLOUD_FIRST" = "true" ] && [ -n "${CEREBRAS_API_KEY:-}" ]; then
     _CEREBRAS_ATTEMPTED=true
@@ -109,43 +167,7 @@ if [ "$IS_CLOUD_FIRST" = "true" ] && [ -n "${CEREBRAS_API_KEY:-}" ]; then
     fi
     _CER_MODEL="${_CER_MODEL:-gpt-oss-120b}"
 
-    TMP_CER_PAYLOAD=$(mktemp)
-    jq -n \
-      --arg model "$_CER_MODEL" \
-      --rawfile prompt "$TMP_PROMPT" \
-      --rawfile context "$TMP_CONTEXT" \
-      'if ($context | rtrimstr("\n") | length) > 0 then {
-        model: $model,
-        max_tokens: 4096,
-        messages: [
-          {role: "system", content: ("You are an expert AI assistant. Output ONLY the response requested.\n\n" + $context)},
-          {role: "user", content: $prompt}
-        ]
-      } else {
-        model: $model,
-        max_tokens: 4096,
-        messages: [
-          {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
-          {role: "user", content: $prompt}
-        ]
-      } end' > "$TMP_CER_PAYLOAD"
-
-    CER_RESPONSE=$(curl -s --max-time 120 -X POST "https://api.cerebras.ai/v1/chat/completions" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer ${CEREBRAS_API_KEY}" \
-      -d @"$TMP_CER_PAYLOAD")
-    CER_EXIT=$?
-    rm -f "$TMP_CER_PAYLOAD"
-
-    if [ "$CER_EXIT" -eq 0 ]; then
-        RESPONSE_CONTENT=$(echo "$CER_RESPONSE" | jq -r '.choices[0].message.content // empty')
-    fi
-
-    if [ -n "$RESPONSE_CONTENT" ]; then
-        echo "[cerebras] ${_CER_MODEL} — OK" >&2
-    else
-        echo "[cerebras] no response — will try Ollama" >&2
-    fi
+    _call_cerebras_api "$_CER_MODEL" || true
 fi
 
 # === OLLAMA (local) ===
@@ -156,6 +178,7 @@ if [ -z "$RESPONSE_CONTENT" ]; then
       --arg model "$SELECTED_MODEL" \
       --rawfile prompt "$TMP_PROMPT" \
       --rawfile context "$TMP_CONTEXT" \
+      --argjson max_tokens "$MAX_TOKENS" \
       '{
         model: $model,
         messages: (
@@ -167,6 +190,7 @@ if [ -z "$RESPONSE_CONTENT" ]; then
             {role: "user", content: $prompt}
           ] end
         ),
+        options: { num_predict: $max_tokens },
         stream: false
       }' > "$TMP_PAYLOAD"
 
@@ -201,16 +225,17 @@ if [ "${FREE_API_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
           --arg model "$_FREE_MODEL" \
           --rawfile prompt "$TMP_PROMPT" \
           --rawfile context "$TMP_CONTEXT" \
+          --argjson max_tokens "$MAX_TOKENS" \
           'if ($context | rtrimstr("\n") | length) > 0 then {
             model: $model,
-            max_tokens: 4096,
+            max_tokens: $max_tokens,
             messages: [
               {role: "system", content: ("You are an expert AI assistant. Output ONLY the response requested.\n\n" + $context)},
               {role: "user", content: $prompt}
             ]
           } else {
             model: $model,
-            max_tokens: 4096,
+            max_tokens: $max_tokens,
             messages: [
               {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
               {role: "user", content: $prompt}
@@ -245,43 +270,7 @@ if [ "$_CEREBRAS_ATTEMPTED" = "false" ] && [ -n "${CEREBRAS_API_KEY:-}" ] && [ -
     fi
     _CER_MODEL="${_CER_MODEL:-gpt-oss-120b}"
 
-    TMP_CER_PAYLOAD=$(mktemp)
-    jq -n \
-      --arg model "$_CER_MODEL" \
-      --rawfile prompt "$TMP_PROMPT" \
-      --rawfile context "$TMP_CONTEXT" \
-      'if ($context | rtrimstr("\n") | length) > 0 then {
-        model: $model,
-        max_tokens: 4096,
-        messages: [
-          {role: "system", content: ("You are an expert AI assistant. Output ONLY the response requested.\n\n" + $context)},
-          {role: "user", content: $prompt}
-        ]
-      } else {
-        model: $model,
-        max_tokens: 4096,
-        messages: [
-          {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
-          {role: "user", content: $prompt}
-        ]
-      } end' > "$TMP_CER_PAYLOAD"
-
-    CER_RESPONSE=$(curl -s --max-time 120 -X POST "https://api.cerebras.ai/v1/chat/completions" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer ${CEREBRAS_API_KEY}" \
-      -d @"$TMP_CER_PAYLOAD")
-    CER_EXIT=$?
-    rm -f "$TMP_CER_PAYLOAD"
-
-    if [ "$CER_EXIT" -eq 0 ]; then
-        RESPONSE_CONTENT=$(echo "$CER_RESPONSE" | jq -r '.choices[0].message.content // empty')
-    fi
-
-    if [ -n "$RESPONSE_CONTENT" ]; then
-        echo "[cerebras] ${_CER_MODEL} — OK" >&2
-    else
-        echo "[cerebras] no response — will try Claude" >&2
-    fi
+    _call_cerebras_api "$_CER_MODEL" || true
 fi
 
 # === FALLBACK: Claude API (paid, last resort) ===
@@ -304,9 +293,10 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
               --arg model "$FALLBACK_MODEL" \
               --rawfile prompt "$TMP_PROMPT" \
               --rawfile context "$TMP_CONTEXT" \
+              --argjson max_tokens "$MAX_TOKENS" \
               'if ($context | rtrimstr("\n") | length) > 0 then {
                 model: $model,
-                max_tokens: 4096,
+                max_tokens: $max_tokens,
                 system: [
                   {
                     type: "text",
@@ -317,7 +307,7 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
                 messages: [{ role: "user", content: $prompt }]
               } else {
                 model: $model,
-                max_tokens: 4096,
+                max_tokens: $max_tokens,
                 system: "You are an expert AI assistant. Output ONLY the response requested.",
                 messages: [{ role: "user", content: $prompt }]
               } end' > "$TMP_FALLBACK_PAYLOAD"
