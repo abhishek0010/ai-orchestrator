@@ -66,6 +66,16 @@ if [ -z "$SELECTED_MODEL" ] || [ "$SELECTED_MODEL" = "null" ]; then
     esac
 fi
 
+# Detect cloud-first roles (planner/reviewer/debugger try Cerebras before Ollama)
+IS_CLOUD_FIRST=false
+if [ -n "$ROLE" ] && [ -f "$CONFIG_FILE" ]; then
+    _IS_CF=$(jq -r --arg role "$ROLE" \
+        'if (.cloud_first_roles // []) | index($role) != null then "true" else "false" end' \
+        "$CONFIG_FILE")
+    IS_CLOUD_FIRST="${_IS_CF:-false}"
+fi
+_CEREBRAS_ATTEMPTED=false
+
 if [ -z "$PROMPT" ]; then
     echo "Usage: $0 [--role <role> | --model <model>] [--prompt <prompt> | --prompt-file <file>] [--context-file <file>]"
     exit 1
@@ -76,50 +86,101 @@ if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
     CONTEXT="$(cat "$CONTEXT_FILE")"
 fi
 
-# Build JSON payload safely using temporary files to avoid shell line length limits
+# Shared temp files for prompt/context — used by all providers
 TMP_PROMPT=$(mktemp)
 TMP_CONTEXT=$(mktemp)
-TMP_PAYLOAD=$(mktemp)
-
 echo "$PROMPT" > "$TMP_PROMPT"
 echo "$CONTEXT" > "$TMP_CONTEXT"
 
-# Use jq to construct the final JSON
-jq -n \
-  --arg model "$SELECTED_MODEL" \
-  --rawfile prompt "$TMP_PROMPT" \
-  --rawfile context "$TMP_CONTEXT" \
-  '{
-    model: $model,
-    messages: (
-      if ($context != "") then [
-        {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
-        {role: "user", content: ("Context information:\n\n" + $context + "\n\n---\n\nBased on the context above, follow these instructions:\n" + $prompt)}
-      ] else [
-        {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
-        {role: "user", content: $prompt}
-      ] end
-    ),
-    stream: false
-  }' > "$TMP_PAYLOAD"
-
-# Measure prompt size before cleanup (1 token ≈ 4 chars)
+# Measure prompt size for token tracking (1 token ≈ 4 chars)
 PROMPT_CHARS=$(wc -c < "$TMP_PROMPT" | tr -d ' ')
 
-# Call Ollama API — capture exit code without crashing (no set -e in this script)
-RESPONSE=$(curl -s -X POST http://localhost:11434/api/chat \
-  -H "Content-Type: application/json" \
-  -d @"$TMP_PAYLOAD")
-OLLAMA_EXIT=$?
+RESPONSE_CONTENT=""
+RESPONSE=""
+OLLAMA_EXIT=1
 
-# Extract response content from Ollama
-RESPONSE_CONTENT=$(echo "$RESPONSE" | jq -r '.message.content // empty')
+# === CLOUD-FIRST: Cerebras before Ollama for planner/reviewer/debugger ===
+if [ "$IS_CLOUD_FIRST" = "true" ] && [ -n "${CEREBRAS_API_KEY:-}" ]; then
+    _CEREBRAS_ATTEMPTED=true
 
-# --- Free API tier (between Ollama and Claude) ---
-# Providers: Google Gemini, Groq, Cerebras, SambaNova, Mistral, etc. via freellmapi proxy
-# Docs: https://github.com/tashfeenahmed/freellmapi
-# Set FREE_API_FALLBACK=false to skip. Configure free_api_url + free_api in llm-config.json
-if [ "${FREE_API_FALLBACK:-}" != "false" ] && { [ "$OLLAMA_EXIT" -ne 0 ] || [ -z "$RESPONSE_CONTENT" ]; }; then
+    _CER_MODEL=""
+    if [ -n "$ROLE" ] && [ -f "$CONFIG_FILE" ]; then
+        _CER_MODEL=$(jq -r --arg role "$ROLE" '.cerebras_api[$role] // empty' "$CONFIG_FILE")
+    fi
+    _CER_MODEL="${_CER_MODEL:-gpt-oss-120b}"
+
+    TMP_CER_PAYLOAD=$(mktemp)
+    jq -n \
+      --arg model "$_CER_MODEL" \
+      --rawfile prompt "$TMP_PROMPT" \
+      --rawfile context "$TMP_CONTEXT" \
+      'if ($context | rtrimstr("\n") | length) > 0 then {
+        model: $model,
+        max_tokens: 4096,
+        messages: [
+          {role: "system", content: ("You are an expert AI assistant. Output ONLY the response requested.\n\n" + $context)},
+          {role: "user", content: $prompt}
+        ]
+      } else {
+        model: $model,
+        max_tokens: 4096,
+        messages: [
+          {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
+          {role: "user", content: $prompt}
+        ]
+      } end' > "$TMP_CER_PAYLOAD"
+
+    CER_RESPONSE=$(curl -s --max-time 120 -X POST "https://api.cerebras.ai/v1/chat/completions" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer ${CEREBRAS_API_KEY}" \
+      -d @"$TMP_CER_PAYLOAD")
+    CER_EXIT=$?
+    rm -f "$TMP_CER_PAYLOAD"
+
+    if [ "$CER_EXIT" -eq 0 ]; then
+        RESPONSE_CONTENT=$(echo "$CER_RESPONSE" | jq -r '.choices[0].message.content // empty')
+    fi
+
+    if [ -n "$RESPONSE_CONTENT" ]; then
+        echo "[cerebras] ${_CER_MODEL} — OK" >&2
+    else
+        echo "[cerebras] no response — will try Ollama" >&2
+    fi
+fi
+
+# === OLLAMA (local) ===
+if [ -z "$RESPONSE_CONTENT" ]; then
+    TMP_PAYLOAD=$(mktemp)
+
+    jq -n \
+      --arg model "$SELECTED_MODEL" \
+      --rawfile prompt "$TMP_PROMPT" \
+      --rawfile context "$TMP_CONTEXT" \
+      '{
+        model: $model,
+        messages: (
+          if ($context != "") then [
+            {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
+            {role: "user", content: ("Context information:\n\n" + $context + "\n\n---\n\nBased on the context above, follow these instructions:\n" + $prompt)}
+          ] else [
+            {role: "system", content: "You are an expert AI assistant. Output ONLY the response requested."},
+            {role: "user", content: $prompt}
+          ] end
+        ),
+        stream: false
+      }' > "$TMP_PAYLOAD"
+
+    RESPONSE=$(curl -s -X POST http://localhost:11434/api/chat \
+      -H "Content-Type: application/json" \
+      -d @"$TMP_PAYLOAD")
+    OLLAMA_EXIT=$?
+    rm -f "$TMP_PAYLOAD"
+
+    RESPONSE_CONTENT=$(echo "$RESPONSE" | jq -r '.message.content // empty')
+fi
+
+# === FREE API (FreeLLM routing) ===
+if [ "${FREE_API_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
 
     _FREE_URL=""
     if [ -n "${FREE_API_URL:-}" ]; then
@@ -170,13 +231,13 @@ if [ "${FREE_API_FALLBACK:-}" != "false" ] && { [ "$OLLAMA_EXIT" -ne 0 ] || [ -z
         if [ -n "$RESPONSE_CONTENT" ]; then
             echo "[free-api] ${_FREE_MODEL} — OK" >&2
         else
-            echo "[free-api] no response from ${_FREE_URL} (${_FREE_MODEL}) — will try Claude" >&2
+            echo "[free-api] no response from ${_FREE_URL} (${_FREE_MODEL}) — will try next" >&2
         fi
     fi
 fi
 
-# --- Cerebras tier (after Groq, before Claude) ---
-if [ -n "${CEREBRAS_API_KEY:-}" ] && [ -z "$RESPONSE_CONTENT" ]; then
+# === CEREBRAS (non-cloud-first fallback) ===
+if [ "$_CEREBRAS_ATTEMPTED" = "false" ] && [ -n "${CEREBRAS_API_KEY:-}" ] && [ -z "$RESPONSE_CONTENT" ]; then
 
     _CER_MODEL=""
     if [ -n "$ROLE" ] && [ -f "$CONFIG_FILE" ]; then
@@ -222,13 +283,10 @@ if [ -n "${CEREBRAS_API_KEY:-}" ] && [ -z "$RESPONSE_CONTENT" ]; then
         echo "[cerebras] no response — will try Claude" >&2
     fi
 fi
-# --- End free API tier ---
 
-# --- Fallback to Claude API (last resort — paid) ---
-# Only reached if both Ollama and free API failed
+# === FALLBACK: Claude API (paid, last resort) ===
 if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
 
-    # Resolve fallback model from config
     FALLBACK_MODEL=""
     if [ -n "$ROLE" ] && [ -f "$CONFIG_FILE" ]; then
         FALLBACK_MODEL=$(jq -r --arg role "$ROLE" '.fallback[$role] // empty' "$CONFIG_FILE")
@@ -237,16 +295,11 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
     if [ -n "$FALLBACK_MODEL" ]; then
         echo "[FALLBACK] using Claude (paid): $FALLBACK_MODEL" >&2
 
-        # Check API key
         if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
             echo "[FALLBACK] ANTHROPIC_API_KEY is not set — cannot call Claude API" >&2
         else
-            # Build Claude API payload using same temp-file pattern
             TMP_FALLBACK_PAYLOAD=$(mktemp)
 
-            # Build Claude API payload with prompt caching:
-            # - context-file content → system block with cache_control (cacheable standards/skills)
-            # - task prompt → user message (changes per request, not cached)
             jq -n \
               --arg model "$FALLBACK_MODEL" \
               --rawfile prompt "$TMP_PROMPT" \
@@ -269,7 +322,6 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
                 messages: [{ role: "user", content: $prompt }]
               } end' > "$TMP_FALLBACK_PAYLOAD"
 
-            # Call Claude API with prompt caching beta header
             FALLBACK_RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${ANTHROPIC_API_KEY}" \
@@ -279,10 +331,8 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
 
             rm -f "$TMP_FALLBACK_PAYLOAD"
 
-            # Extract content from Claude response format (.content[0].text)
             RESPONSE_CONTENT=$(echo "$FALLBACK_RESPONSE" | jq -r '.content[0].text // empty')
 
-            # Log cache metrics to stderr (cache_creation_input_tokens / cache_read_input_tokens)
             CACHE_CREATED=$(echo "$FALLBACK_RESPONSE" | jq -r '.usage.cache_creation_input_tokens // 0')
             CACHE_READ=$(echo "$FALLBACK_RESPONSE" | jq -r '.usage.cache_read_input_tokens // 0')
             if [ "$CACHE_READ" -gt 0 ] 2>/dev/null; then
@@ -291,7 +341,6 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
                 echo "[prompt-cache] MISS — ${CACHE_CREATED} tokens written to cache" >&2
             fi
 
-            # Log fallback usage to token_stats.json (best-effort)
             STATS_FILE="$HOME/.claude/token_stats.json"
             if [ ! -f "$STATS_FILE" ]; then
                 echo '{"runs": []}' > "$STATS_FILE"
@@ -310,17 +359,15 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
         fi
     fi
 fi
-# --- End fallback ---
 
-# Cleanup Ollama payload temp files
-rm -f "$TMP_PROMPT" "$TMP_CONTEXT" "$TMP_PAYLOAD"
+# Cleanup shared temp files
+rm -f "$TMP_PROMPT" "$TMP_CONTEXT"
 
 # Track token usage — best effort, never fail the script
 TRACK_SCRIPT="$HOME/.claude/track_savings.sh"
 if [ -f "$TRACK_SCRIPT" ]; then
     INPUT_TOKENS_REAL=$(echo "$RESPONSE" | jq -r '.prompt_eval_count // 0')
     OUTPUT_TOKENS_REAL=$(echo "$RESPONSE" | jq -r '.eval_count // 0')
-    # Fall back to char estimation if Ollama didn't return token counts
     if [ "$INPUT_TOKENS_REAL" -eq 0 ] 2>/dev/null; then
         INPUT_TOKENS_REAL=$(( PROMPT_CHARS / 4 ))
     fi

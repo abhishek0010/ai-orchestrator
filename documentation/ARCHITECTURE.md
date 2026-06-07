@@ -232,10 +232,13 @@ bash ~/.claude/call_ollama.sh \
 ### How it works
 
 1. Walks up from `$PWD` to find the nearest `llm-config.json`. Project-level config wins over `~/.claude/llm-config.json`.
-2. Resolves the Ollama model name for the given role using `jq`.
-3. Writes the prompt and optional context file to temp files, then builds the JSON payload with `jq`.
-4. Sends `POST http://localhost:11434/api/chat` and extracts `.message.content` from the response.
-5. Calls `track_savings.sh` in best-effort mode to record estimated token usage.
+2. Resolves the Ollama model name for the given role via `jq`.
+3. Reads `cloud_first_roles` from config and sets `IS_CLOUD_FIRST` if the role is listed there.
+4. Writes the prompt and optional context to shared `TMP_PROMPT`/`TMP_CONTEXT` temp files before any provider attempt.
+5. Runs the provider chain, stopping at the first successful response:
+   - Cloud-first roles (`planner`, `reviewer`, `debugger`): Cerebras → FreeLLM → Ollama → Claude
+   - All other roles (`coder`, `commit`, `triage`, `devops`, `quick-coder`, `pre-reviewer`): Ollama → FreeLLM → Cerebras → Claude
+6. Calls `track_savings.sh` in best-effort mode to record estimated token usage.
 
 ---
 
@@ -246,14 +249,50 @@ bash ~/.claude/call_ollama.sh \
 ```json
 {
   "models": {
-    "coder":        "hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:IQ4_XS",
-    "reviewer":     "qwen2.5-coder:7b",
-    "pre-reviewer": "qwen2.5-coder:7b",
-    "quick-coder":  "qwen2.5-coder:7b",
+    "coder":        "qwen3:32b-q4_K_M",
+    "reviewer":     "qwen3:32b-q4_K_M",
+    "pre-reviewer": "qwen3:8b",
+    "debugger":     "qwen3:32b-q4_K_M",
+    "devops":       "qwen3:8b",
+    "quick-coder":  "qwen3:8b",
     "commit":       "qwen2.5-coder:7b",
-    "triage":       "llama3.1:8b",
+    "triage":       "qwen3:8b",
     "embedding":    "mxbai-embed-large"
-  }
+  },
+  "free_api_url": "http://localhost:3001/v1/chat/completions",
+  "free_api": {
+    "planner":      "qwen/qwen3-32b",
+    "coder":        "qwen3-coder-next",
+    "reviewer":     "auto",
+    "pre-reviewer": "auto",
+    "debugger":     "qwen3-coder-next",
+    "devops":       "auto",
+    "quick-coder":  "qwen3-coder-next",
+    "commit":       "auto",
+    "triage":       "auto"
+  },
+  "cerebras_api": {
+    "coder":        "gpt-oss-120b",
+    "reviewer":     "gpt-oss-120b",
+    "pre-reviewer": "gpt-oss-120b",
+    "debugger":     "gpt-oss-120b",
+    "devops":       "gpt-oss-120b",
+    "quick-coder":  "gpt-oss-120b",
+    "commit":       "gpt-oss-120b",
+    "triage":       "gpt-oss-120b"
+  },
+  "fallback": {
+    "coder":        "claude-sonnet-4-6",
+    "reviewer":     "claude-sonnet-4-6",
+    "pre-reviewer": "claude-haiku-4-5-20251001",
+    "debugger":     "claude-sonnet-4-6",
+    "devops":       "claude-haiku-4-5-20251001",
+    "quick-coder":  "claude-haiku-4-5-20251001",
+    "commit":       "claude-haiku-4-5-20251001",
+    "triage":       "claude-haiku-4-5-20251001",
+    "embedding":    ""
+  },
+  "cloud_first_roles": ["planner", "reviewer", "debugger"]
 }
 ```
 

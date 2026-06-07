@@ -42,5 +42,6 @@
     "commit": "claude-haiku-4-5-20251001",
     "triage": "claude-haiku-4-5-20251001",
     "embedding": ""
-  }
+  },
+  "cloud_first_roles": ["planner", "reviewer", "debugger"]
 }

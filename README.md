@@ -48,7 +48,7 @@ src/
                           reviews ollama_output_<domain>.md after all domains complete
     BuildChecker.ts       Runs npx tsc --noEmit; returns pass/fail with stderr
     DiffCompressor.ts     Strips lock files, collapses blanks, truncates long hunks
-    FileWriter.ts         Parses %%FILE…%%ENDFILE blocks from Ollama output; writes to disk
+    FileWriter.ts         Parses %%FILE...%%ENDFILE blocks from Ollama output; writes to disk
     TriageRouter.ts       Reads triage_ts.md and extracts the chosen TriageRoute
   cli/
     commit.ts             npm run ao-commit — calls local-commit.sh via spawn
@@ -105,29 +105,52 @@ Model routing is controlled by `llm-config.json` in the repo root:
   "models": {
     "coder":        "qwen3:32b-q4_K_M",
     "reviewer":     "qwen3:32b-q4_K_M",
-    "debugger":     "qwen3:32b-q4_K_M",
     "pre-reviewer": "qwen3:8b",
-    "quick-coder":  "qwen3:8b",
+    "debugger":     "qwen3:32b-q4_K_M",
     "devops":       "qwen3:8b",
-    "triage":       "qwen3:8b",
+    "quick-coder":  "qwen3:8b",
     "commit":       "qwen2.5-coder:7b",
+    "triage":       "qwen3:8b",
     "embedding":    "mxbai-embed-large"
+  },
+  "free_api_url": "http://localhost:3001/v1/chat/completions",
+  "free_api": {
+    "planner":      "qwen/qwen3-32b",
+    "coder":        "qwen3-coder-next",
+    "reviewer":     "auto",
+    "pre-reviewer": "auto",
+    "debugger":     "qwen3-coder-next",
+    "devops":       "auto",
+    "quick-coder":  "qwen3-coder-next",
+    "commit":       "auto",
+    "triage":       "auto"
+  },
+  "cerebras_api": {
+    "coder":        "gpt-oss-120b",
+    "reviewer":     "gpt-oss-120b",
+    "pre-reviewer": "gpt-oss-120b",
+    "debugger":     "gpt-oss-120b",
+    "devops":       "gpt-oss-120b",
+    "quick-coder":  "gpt-oss-120b",
+    "commit":       "gpt-oss-120b",
+    "triage":       "gpt-oss-120b"
   },
   "fallback": {
     "coder":        "claude-sonnet-4-6",
     "reviewer":     "claude-sonnet-4-6",
-    "debugger":     "claude-sonnet-4-6",
     "pre-reviewer": "claude-haiku-4-5-20251001",
-    "quick-coder":  "claude-haiku-4-5-20251001",
+    "debugger":     "claude-sonnet-4-6",
     "devops":       "claude-haiku-4-5-20251001",
+    "quick-coder":  "claude-haiku-4-5-20251001",
     "commit":       "claude-haiku-4-5-20251001",
     "triage":       "claude-haiku-4-5-20251001",
     "embedding":    ""
-  }
+  },
+  "cloud_first_roles": ["planner", "reviewer", "debugger"]
 }
 ```
 
-Each role has an Ollama primary model and a Claude fallback used when Ollama is unavailable. Changing a model name takes effect immediately — no restart needed. See [Architecture](documentation/ARCHITECTURE.md#model-configuration) for details.
+Routing follows a 4-tier provider chain. Roles listed in `cloud_first_roles` (`planner`, `reviewer`, `debugger`) try Cerebras first, then FreeLLM, then Ollama, then Claude. All other roles start with Ollama, then fall through FreeLLM, Cerebras, and finally Claude. Changing a model name takes effect immediately — no restart needed. See [Architecture](documentation/ARCHITECTURE.md#model-configuration) for details.
 
 ## Development
 
