@@ -1,13 +1,28 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import type { ClusterConfig, ClusterNode, Role, RunResult } from '../types/index.js';
+import { callLlmEndpoint } from './LlmHttpClient.js';
+import type { ClusterConfig, Role, RunResult } from '../types/index.js';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const FALLBACK_HOST = 'localhost';
 const FALLBACK_PORT = 11434;
-const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 1000;
+
+// Retry delays for transient connection failures (model loading, brief busy periods)
+const RETRY_DELAYS_MS = [5_000, 15_000, 30_000] as const;
+
+type Candidate = {
+  readonly url: string;
+  readonly model: string;
+  readonly label: string;
+  readonly authToken?: string;
+  /** false = disable thinking mode for qwen3 on Ollama */
+  readonly think?: boolean;
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 /**
  * Inference runner that dispatches each role to the first matching cluster node.
@@ -27,8 +42,8 @@ export class DistributedRunner {
   }
 
   /**
-   * Routes the request to the first cluster node that lists `role` in its roles map.
-   * Retries up to MAX_RETRIES times on transient failure.
+   * Routes the role to all candidate nodes in order; falls over to the next
+   * candidate automatically on connection/timeout errors.
    * Returns RunResult — never throws.
    */
   async run(role: Role, promptFile: string, contextFile?: string): Promise<RunResult> {
@@ -40,26 +55,13 @@ export class DistributedRunner {
       return { ok: false, error: `context file not found: ${contextFile}` };
     }
 
-    let lastResult: RunResult = { ok: false, error: 'no attempts made' };
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      if (attempt > 0) {
-        process.stderr.write(
-          `[distributed-runner] retry ${attempt}/${MAX_RETRIES} for role="${role}"\n`,
-        );
-        await new Promise<void>(r => setTimeout(r, attempt * RETRY_DELAY_MS));
-      }
-      lastResult = await this.runOnce(role, promptFile, contextFile);
-      if (lastResult.ok) return lastResult;
-    }
-
-    return lastResult;
+    return this.runOnce(role, promptFile, contextFile);
   }
 
   /**
-   * Single attempt: resolves node, reads prompt/context, calls the node API.
-   * Falls back to localhost:11434 + model from llm-config.json if no node matches.
-   * Returns RunResult — never throws.
+   * Reads prompt/context files, resolves all candidate nodes, then tries each in order.
+   * On connection/timeout errors the next candidate is tried automatically.
+   * Non-connection errors (API 4xx/5xx, bad JSON) stop immediately.
    */
   private async runOnce(role: Role, promptFile: string, contextFile?: string): Promise<RunResult> {
     const systemPrompt = this.readSystemPrompt(role);
@@ -83,118 +85,168 @@ export class DistributedRunner {
       }
     }
 
-    const resolved = this.resolveNode(role);
-    if (resolved === null) {
+    const candidates = this.resolveCandidates(role);
+    if (candidates.length === 0) {
       return {
         ok: false,
         error: `no node found for role "${role}" and llm-config.json fallback unavailable`,
       };
     }
 
-    const { host, port, model } = resolved;
+    let lastResult: RunResult = { ok: false, error: 'no attempts made' };
 
-    process.stderr.write(
-      `[distributed-runner] role="${role}" -> ${host}:${port} model="${model}"\n`,
-    );
+    for (let ci = 0; ci < candidates.length; ci++) {
+      const candidate = candidates[ci];
+      if (candidate === undefined) continue;
 
-    const url = `http://${host}:${port}/v1/chat/completions`;
+      const { label } = candidate;
 
-    const body = JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-    });
+      // Retry the same node on transient connection failures (model loading, brief busy period).
+      for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+        if (attempt > 0) {
+          const delay = RETRY_DELAYS_MS[attempt - 1] ?? 30_000;
+          process.stderr.write(
+            `[distributed-runner] ${label} unreachable — retry ${attempt}/${RETRY_DELAYS_MS.length} in ${delay / 1000}s\n`,
+          );
+          await sleep(delay);
+        }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-    }, this.timeoutMs);
+        process.stderr.write(
+          `[distributed-runner] role="${role}" -> ${label} model="${candidate.model}"${attempt > 0 ? ` (attempt ${attempt + 1})` : ''}\n`,
+        );
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-        signal: controller.signal,
-      });
-    } catch (err) {
-      clearTimeout(timer);
-      const isDomError =
-        typeof err === 'object' &&
-        err !== null &&
-        (err as { name?: unknown }).name === 'AbortError';
-      const message = isDomError
-        ? `timeout after ${this.timeoutMs / 1000}s`
-        : err instanceof Error
-          ? err.message
-          : String(err);
-      return { ok: false, error: `node ${host}:${port} unreachable: ${message}` };
-    }
+        lastResult = await callLlmEndpoint({
+          url: candidate.url,
+          model: candidate.model,
+          systemPrompt,
+          userContent,
+          timeoutMs: this.timeoutMs,
+          label,
+          ...(candidate.authToken !== undefined ? { authToken: candidate.authToken } : {}),
+          ...(candidate.think !== undefined ? { think: candidate.think } : {}),
+        });
+        if (lastResult.ok) return lastResult;
 
-    clearTimeout(timer);
-
-    if (!response.ok) {
-      let bodyText = '';
-      try {
-        bodyText = await response.text();
-      } catch {
-        // best-effort — ignore read error on error body
+        const isUnreachable = lastResult.error.includes('unreachable');
+        if (isUnreachable && attempt < RETRY_DELAYS_MS.length) {
+          continue; // retry same node
+        }
+        break; // non-connection error or retries exhausted
       }
-      return {
-        ok: false,
-        error: `node ${host}:${port} API error: ${response.status} ${response.statusText} — ${bodyText.slice(0, 200)}`,
-      };
+
+      // Fall over on connection errors or rate limits — both mean "try next provider".
+      const shouldFallover =
+        lastResult.error.includes('unreachable') || lastResult.error.includes('429');
+      if (shouldFallover && ci < candidates.length - 1) {
+        process.stderr.write(
+          `[distributed-runner] ${label} unavailable — trying next node\n`,
+        );
+        continue;
+      }
+      break;
     }
 
-    let json: unknown;
-    try {
-      json = await response.json();
-    } catch (err) {
-      return { ok: false, error: `node ${host}:${port} response parse error: ${String(err)}` };
-    }
-
-    const text = extractContent(json);
-    if (text === null) {
-      return {
-        ok: false,
-        error: `node ${host}:${port} response missing choices[0].message.content`,
-      };
-    }
-
-    return { ok: true, output: text.trim() };
+    return lastResult;
   }
 
   /**
-   * Finds the first node whose roles map contains the given role.
-   * Returns { host, port, model } or falls back to llm-config.json + localhost:11434.
-   * Returns null only when no node matches AND the fallback is unavailable.
+   * Returns all candidates in priority order:
+   * 1. Cerebras (if CEREBRAS_API_KEY set and role configured in llm-config.json)
+   * 2. FreeLLM  (if FREELLM_API_KEY set and free_api_url configured)
+   * 3. Cluster nodes from exo-config.json (in config order)
+   * 4. llm-config.json fallback (localhost:11434)
    */
-  private resolveNode(role: Role): { host: string; port: number; model: string } | null {
-    for (let i = 0; i < this.config.nodes.length; i++) {
-      const node: ClusterNode | undefined = this.config.nodes[i];
-      if (node === undefined) continue;
-      const model = node.roles[role];
-      if (model !== undefined) {
-        return { host: node.host, port: node.port, model };
+  private resolveCandidates(role: Role): Candidate[] {
+    const candidates: Candidate[] = [];
+    const cfg = this.readLlmConfig();
+
+    // 1. Cerebras
+    const cerebrasKey = process.env['CEREBRAS_API_KEY'] ?? '';
+    if (cerebrasKey.length > 0 && cfg !== null) {
+      const cerModel =
+        (cfg['cerebras_api'] as Record<string, unknown> | undefined)?.[role];
+      if (typeof cerModel === 'string' && cerModel.length > 0) {
+        candidates.push({
+          url: 'https://api.cerebras.ai/v1/chat/completions',
+          model: cerModel,
+          label: 'Cerebras',
+          authToken: cerebrasKey,
+        });
       }
     }
 
-    // No node claimed this role — fall back to llm-config.json + localhost:11434
-    const fallbackModel = this.readFallbackModel(role);
-    if (fallbackModel === null) {
-      process.stderr.write(
-        `[distributed-runner] role "${role}" not found in any node and llm-config.json has no entry\n`,
-      );
-      return null;
+    // 2. FreeLLM
+    const freellmKey = process.env['FREELLM_API_KEY'] ?? process.env['FREE_API_KEY'] ?? '';
+    if (freellmKey.length > 0 && cfg !== null) {
+      const freeUrl = cfg['free_api_url'];
+      const freeModel = (cfg['free_api'] as Record<string, unknown> | undefined)?.[role];
+      if (typeof freeUrl === 'string' && freeUrl.length > 0 && typeof freeModel === 'string') {
+        candidates.push({
+          url: freeUrl,
+          model: freeModel,
+          label: 'FreeLLM',
+          authToken: freellmKey,
+        });
+      }
     }
 
-    process.stderr.write(
-      `[distributed-runner] role "${role}" not in cluster — falling back to ${FALLBACK_HOST}:${FALLBACK_PORT} model="${fallbackModel}"\n`,
-    );
-    return { host: FALLBACK_HOST, port: FALLBACK_PORT, model: fallbackModel };
+    // 3. Cluster nodes from exo-config.json
+    for (const node of this.config.nodes) {
+      const model = node.roles[role];
+      if (model !== undefined) {
+        candidates.push({
+          url: `http://${node.host}:${node.port}/v1/chat/completions`,
+          model,
+          label: `${node.name ?? node.host}:${node.port}`,
+          // Disable thinking mode for qwen3 to avoid token waste on code tasks
+          ...(model.toLowerCase().includes('qwen3') ? { think: false as const } : {}),
+        });
+      }
+    }
+
+    // 4. llm-config.json fallback (localhost:11434)
+    const fallbackModel = this.readFallbackModel(role);
+    if (fallbackModel !== null) {
+      const fallbackUrl = `http://${FALLBACK_HOST}:${FALLBACK_PORT}/v1/chat/completions`;
+      const alreadyPresent = candidates.some(c => c.url === fallbackUrl);
+      if (!alreadyPresent) {
+        candidates.push({
+          url: fallbackUrl,
+          model: fallbackModel,
+          label: `${FALLBACK_HOST}:${FALLBACK_PORT}`,
+          ...(fallbackModel.toLowerCase().includes('qwen3') ? { think: false as const } : {}),
+        });
+      }
+    }
+
+    if (candidates.length === 0) {
+      process.stderr.write(
+        `[distributed-runner] role "${role}" not found in any provider\n`,
+      );
+    }
+
+    return candidates;
+  }
+
+  /**
+   * Reads ~/.claude/llm-config.json as a raw object. Returns null on any error.
+   */
+  private readLlmConfig(): Record<string, unknown> | null {
+    const configPath = join(homedir(), '.claude', 'llm-config.json');
+
+    // Also check project root for local override
+    const localConfig = join(this.projectRoot, 'llm-config.json');
+    const cfgPath = existsSync(localConfig) ? localConfig : configPath;
+    if (!existsSync(cfgPath)) return null;
+
+    try {
+      const raw = readFileSync(cfgPath, 'utf8');
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -255,19 +307,3 @@ export class DistributedRunner {
   }
 }
 
-/**
- * Extracts the text content from an OpenAI-compatible chat completion response.
- * Returns null if the expected shape is absent.
- */
-function extractContent(json: unknown): string | null {
-  if (typeof json !== 'object' || json === null) return null;
-  const choices = (json as Record<string, unknown>)['choices'];
-  if (!Array.isArray(choices) || choices.length === 0) return null;
-  const first = choices[0];
-  if (typeof first !== 'object' || first === null) return null;
-  const message = (first as Record<string, unknown>)['message'];
-  if (typeof message !== 'object' || message === null) return null;
-  const content = (message as Record<string, unknown>)['content'];
-  if (typeof content !== 'string') return null;
-  return content;
-}

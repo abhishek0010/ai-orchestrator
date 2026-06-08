@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { KNOWN_DOMAINS } from '../types/index.js';
+import { KNOWN_DOMAINS, KNOWN_ROLES } from '../types/index.js';
 import type { AgentDomain, TriageResult, TriageRoute } from '../types/index.js';
 import type { AgentRunner } from './AgentRunner.js';
 
 const TRIAGE_FALLBACK: TriageResult = {
-  domains: ['coder'],
+  domains: [KNOWN_ROLES.coder],
   reasoning: 'LLM call failed — fallback to coder',
   graphifyContext: undefined,
   route: undefined,
@@ -22,6 +22,23 @@ const ARCHITECT_FIRST_KEYWORDS: readonly string[] = [
   'extract',
   'split',
   'rewrite',
+] as const;
+
+const REVIEWER_KEYWORDS: readonly string[] = [
+  'review',
+  'ревью',
+  'код ревью',
+  'code review',
+  'audit',
+  'аудит',
+  'проверь код',
+  'analyze code',
+] as const;
+
+const IMPLEMENTATION_OVERRIDES: readonly string[] = [
+  'fix', 'исправь', 'исправить', 'implement', 'add', 'добавь', 'добавить',
+  'refactor', 'рефактор', 'update', 'обнови', 'found in', 'из ревью',
+  'из код ревью', 'after review', 'после ревью',
 ] as const;
 
 type GraphNode = {
@@ -59,14 +76,13 @@ export class TriageAgent {
       const tmpDir = mkdtempSync(join(tmpdir(), 'triage-'));
       const promptFile = join(tmpDir, 'prompt.txt');
 
-      // Pass triage-ts.md as context so the LLM knows the required output format
       const triageInstructionsPath = join(this.projectRoot, 'agents', 'triage-ts.md');
       const contextFile = existsSync(triageInstructionsPath) ? triageInstructionsPath : undefined;
 
       let result;
       try {
         writeFileSync(promptFile, prompt, 'utf8');
-        result = await this.runner.run('triage', promptFile, contextFile);
+        result = await this.runner.run(KNOWN_ROLES.triage, promptFile, contextFile);
       } finally {
         rmSync(tmpDir, { recursive: true, force: true });
       }
@@ -158,7 +174,6 @@ export class TriageAgent {
       return undefined;
     }
 
-    // Find seed nodes whose label matches any keyword
     const seedIds = new Set<string>();
     for (const node of graph.nodes) {
       const lower = node.label.toLowerCase();
@@ -171,7 +186,6 @@ export class TriageAgent {
       return undefined;
     }
 
-    // Build adjacency map: id -> [{ id, relation }]
     const adjacency = new Map<string, Array<{ id: string; relation: string }>>();
     for (const link of graph.links) {
       const rel = link.relation ?? 'related';
@@ -181,8 +195,7 @@ export class TriageAgent {
       adjacency.get(link.target)!.push({ id: link.source, relation: rel });
     }
 
-    // BFS depth=2 from seed nodes
-    const visited = new Map<string, number>(); // id -> depth first seen
+    const visited = new Map<string, number>();
     const queue: Array<{ id: string; depth: number }> = [];
     for (const id of seedIds) {
       visited.set(id, 0);
@@ -202,13 +215,11 @@ export class TriageAgent {
       }
     }
 
-    // Build node lookup
     const nodeById = new Map<string, GraphNode>();
     for (const node of graph.nodes) {
       nodeById.set(node.id, node);
     }
 
-    // Format structured output
     const seedLabels = [...seedIds]
       .map(id => nodeById.get(id)?.label ?? id)
       .join(', ');
@@ -218,12 +229,9 @@ export class TriageAgent {
       if (depth === 0) continue;
       const node = nodeById.get(id);
       if (node === undefined) continue;
-      const link = graph.links.find(
-        l =>
-          (l.source === id || l.target === id) &&
-          (visited.get(l.source === id ? l.target : l.source) ?? 99) < depth,
-      );
-      const rel = link?.relation ?? 'related';
+      const neighbors = adjacency.get(id) ?? [];
+      const closerNeighbor = neighbors.find(n => (visited.get(n.id) ?? 99) < depth);
+      const rel = closerNeighbor?.relation ?? 'related';
       neighborLines.push(`- ${node.label} (via ${rel})`);
     }
 
@@ -288,11 +296,28 @@ export class TriageAgent {
     return undefined;
   }
 
+  private isReviewTask(task: string): boolean {
+    const lower = task.toLowerCase();
+    if (!REVIEWER_KEYWORDS.some(kw => lower.includes(kw))) return false;
+    return !IMPLEMENTATION_OVERRIDES.some(kw => lower.includes(kw));
+  }
+
   private parseResponse(
     task: string,
     output: string,
     graphifyContext: string | undefined,
   ): TriageResult {
+    if (this.isReviewTask(task)) {
+      process.stderr.write('[triage] review task detected — routing to reviewer domain\n');
+      return {
+        domains: [KNOWN_ROLES.reviewer],
+        reasoning: 'Task contains review/audit keywords — routing to reviewer domain for full code analysis',
+        graphifyContext,
+        route: undefined,
+        triggerReason: undefined,
+      };
+    }
+
     const domainsMatch = output.match(/#{1,6}\s*Domains\s*[:\n]([\s\S]*?)(?=#{1,6}|$)/i);
     const reasoningMatch = output.match(/#{1,6}\s*Reasoning\s*[:\n]([\s\S]*?)(?=#{1,6}|$)/i);
 
@@ -300,7 +325,7 @@ export class TriageAgent {
       process.stderr.write('[triage] could not parse ## Domains section — fallback to coder\n');
 
       return {
-        domains: ['coder'],
+        domains: [KNOWN_ROLES.coder],
         reasoning: 'LLM output unparseable — fallback to coder',
         graphifyContext,
         route: undefined,
@@ -311,7 +336,7 @@ export class TriageAgent {
     const domainBlock = domainsMatch[1];
     if (domainBlock === undefined) {
       return {
-        domains: ['coder'],
+        domains: [KNOWN_ROLES.coder],
         reasoning: 'Empty domains block',
         graphifyContext,
         route: undefined,
@@ -325,7 +350,7 @@ export class TriageAgent {
       .filter(line => line.length > 0)
       .filter((line): line is AgentDomain => (KNOWN_DOMAINS as readonly string[]).includes(line));
 
-    const domains: readonly AgentDomain[] = parsedDomains.length > 0 ? parsedDomains : ['coder'];
+    const domains: readonly AgentDomain[] = parsedDomains.length > 0 ? parsedDomains : [KNOWN_ROLES.coder];
 
     const reasoningBlock = reasoningMatch?.[1]?.trim() ?? 'No reasoning provided';
 

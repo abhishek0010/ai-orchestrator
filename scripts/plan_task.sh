@@ -59,6 +59,7 @@ if [ -f "$WIKI_DIR/WIKI_INDEX.md" ]; then
     # Найти релевантные community файлы по ключевым словам задачи
     # Берём слова длиннее 4 символов из описания задачи
     KEYWORDS=$(echo "$TASK $DOMAIN" | tr ' ' '\n' | awk 'length>4' | tr '\n' '|' | sed 's/|$//')
+    KEYWORDS=$(printf '%s' "$KEYWORDS" | sed 's/[.[\*^$()+?{|]/\\&/g')
     if [ -n "$KEYWORDS" ]; then
         RELEVANT=$(grep -il -E "$KEYWORDS" "$WIKI_DIR"/community_*.md 2>/dev/null | head -4)
         if [ -n "$RELEVANT" ]; then

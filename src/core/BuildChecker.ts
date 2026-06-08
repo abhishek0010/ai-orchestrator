@@ -1,10 +1,15 @@
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 type BuildCheckResult =
   | { readonly passed: true }
   | { readonly passed: false; readonly stderr: string };
 
 export async function runBuildCheck(projectRoot: string): Promise<BuildCheckResult> {
+  if (!existsSync(join(projectRoot, 'tsconfig.json'))) {
+    return { passed: true };
+  }
   try {
     execSync('npx tsc --noEmit', {
       cwd: projectRoot,

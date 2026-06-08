@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { AgentRunner } from '../agents/AgentRunner.js';
@@ -7,7 +7,8 @@ import { ExoRunner } from './ExoRunner.js';
 import { DistributedRunner } from './DistributedRunner.js';
 import { DependencyGraph } from './DependencyGraph.js';
 import { compressDiff } from './DiffCompressor.js';
-import { CODE_GEN_INSTRUCTIONS, parseFileBlocks, writeFilesToProject } from './FileWriter.js';
+import { CODE_GEN_INSTRUCTIONS, REVIEW_INSTRUCTIONS, parseFileBlocks, writeFilesToProject } from './FileWriter.js';
+import { KNOWN_ROLES } from '../types/index.js';
 import type {
   AgentDomain,
   AgentResult,
@@ -17,11 +18,14 @@ import type {
   Role,
 } from '../types/index.js';
 
+const { coder, unit_tester, doc_writer, devops, reviewer } = KNOWN_ROLES;
+
 const DOMAIN_DEPENDENCIES: Record<AgentDomain, readonly AgentDomain[]> = {
-  coder: [],
-  'unit-tester': ['coder'],
-  'doc-writer': ['coder'],
-  devops: ['coder', 'unit-tester', 'doc-writer'],
+  [coder]:       [],
+  [unit_tester]: [coder],
+  [doc_writer]:  [coder],
+  [devops]:      [coder, unit_tester, doc_writer],
+  [reviewer]:    [],
 };
 
 const NEEDS_CHANGES_RE = /NEEDS[\s_]CHANGES/i;
@@ -62,12 +66,6 @@ export class Orchestrator {
     }
   }
 
-  /**
-   * Reads pre-written task_context_<domain>.md files from contextDir,
-   * builds the dependency graph, executes in topological order,
-   * writes generated files directly to the project, then reviews.
-   * If review finds failures, runs one fix round and re-reviews.
-   */
   async run(domains: AgentDomain[]): Promise<OrchestratorResult> {
     if (domains.length === 0) {
       process.stderr.write('[developer-agent] no domains provided\n');
@@ -86,23 +84,19 @@ export class Orchestrator {
         `[developer-agent] fix round: re-running ${[...failedDomains].join(', ')}\n`,
       );
 
-      // Append reviewer feedback to each failed domain's context file
       for (const domain of failedDomains) {
         const failedResult = agentResults.find(r => r.domain === domain);
         this.appendReviewFeedback(domain, failedResult?.contextFile);
       }
 
-      // Re-build and re-execute only the failed domains
       const fixTasks = this.buildTasks([...failedDomains]);
       const fixResults = await this.execute(fixTasks);
 
-      // Merge fix results into agentResults (replace by domain)
       const fixResultMap = new Map(fixResults.map(r => [r.domain, r]));
       agentResults = agentResults.map(r =>
         fixResultMap.has(r.domain) ? (fixResultMap.get(r.domain) as AgentResult) : r,
       );
 
-      // Re-review only the domains that were re-run
       const fixReviewOutcome = await this.review(fixResults);
       return { agentResults, reviewOutcome: fixReviewOutcome };
     }
@@ -117,8 +111,6 @@ export class Orchestrator {
       const domainContextFile = join(this.contextDir, `task_context_${domain}.md`);
       const fallbackContextFile = join(this.contextDir, 'task_context.md');
 
-      // Prune dependency list to only include domains in the requested set.
-      // This makes isolation explicit: DependencyGraph never sees edges to absent nodes.
       const prunedDeps = DOMAIN_DEPENDENCIES[domain].filter(dep => activeDomainSet.has(dep));
 
       if (existsSync(domainContextFile)) {
@@ -139,19 +131,16 @@ export class Orchestrator {
     });
   }
 
-  /**
-   * Executes tasks level by level (dependency order).
-   * Within each level, tasks run concurrently.
-   */
   private async execute(tasks: AgentTask[]): Promise<AgentResult[]> {
     const graph = new DependencyGraph(tasks);
     const levels = graph.getLevels();
     const allResults: AgentResult[] = [];
     const failedDomains = new Set<AgentDomain>();
 
-    // Write the static code-gen instructions file once
     const instructionFile = join(this.contextDir, 'codegen_instructions.md');
     writeFileSync(instructionFile, CODE_GEN_INSTRUCTIONS, 'utf8');
+    const reviewInstructionFile = join(this.contextDir, 'review_instructions.md');
+    writeFileSync(reviewInstructionFile, REVIEW_INSTRUCTIONS, 'utf8');
 
     for (const level of levels) {
       console.log(`[developer-agent] executing: ${level.map(t => t.domain).join(', ')}`);
@@ -175,13 +164,11 @@ export class Orchestrator {
             return { domain: agentTask.domain, output: '', changedFiles: [], contextFile: undefined, status: 'skipped' };
           }
 
-          // instructionFile = prompt (format instructions)
-          // contextFile     = task plan (fed as --context-file)
-          // DistributedRunner routes by role name — pass the domain so node lookup works.
-          // AgentRunner and ExoRunner always use 'coder' (role maps to model in llm-config).
+          const isReviewer = agentTask.domain === KNOWN_ROLES.reviewer;
+          const promptFile = isReviewer ? reviewInstructionFile : instructionFile;
           const runRole: Role =
-            this.runner instanceof DistributedRunner ? (agentTask.domain as Role) : 'coder';
-          const result = await this.runner.run(runRole, instructionFile, agentTask.contextFile);
+            this.runner instanceof DistributedRunner ? (agentTask.domain as Role) : (isReviewer ? KNOWN_ROLES.reviewer : KNOWN_ROLES.coder);
+          const result = await this.runner.run(runRole, promptFile, agentTask.contextFile);
 
           if (!result.ok) {
             process.stderr.write(`[developer-agent] ${agentTask.domain} failed: ${result.error}\n`);
@@ -189,7 +176,6 @@ export class Orchestrator {
             return { domain: agentTask.domain, output: '', changedFiles: [], contextFile: agentTask.contextFile, status: 'failed' };
           }
 
-          // Parse output and write files directly to the project
           const parsed = parseFileBlocks(result.output);
 
           if (parsed.length === 0) {
@@ -237,32 +223,20 @@ export class Orchestrator {
     process.stderr.write(`[developer-agent] raw output saved to: ${rawPath}\n`);
   }
 
-  /**
-   * Fetches the git diff for the given changed files relative to HEAD.
-   * Returns an empty string if git is unavailable, the list is empty,
-   * or any other error occurs.
-   */
   private getGitDiff(changedFiles: readonly string[]): string {
     if (changedFiles.length === 0) return '';
     try {
-      const fileArgs = changedFiles.map(f => `"${f}"`).join(' ');
-      return execSync(`git diff HEAD -- ${fileArgs}`, {
+      const result = spawnSync('git', ['diff', 'HEAD', '--', ...changedFiles], {
         cwd: this.projectRoot,
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
       });
+      return result.stdout ?? '';
     } catch (err) {
       process.stderr.write(`[developer-agent] could not fetch git diff: ${String(err)}\n`);
       return '';
     }
   }
 
-  /**
-   * Runs reviewer for each completed domain.
-   * Saves reviewer output to review_output_{domain}.md for the fix round.
-   * Marks a domain as failed if the runner errors OR output contains NEEDS CHANGES.
-   * Returns ReviewOutcome instead of throwing.
-   */
   private async review(results: AgentResult[]): Promise<ReviewOutcome> {
     const failedDomains: AgentDomain[] = [];
 
@@ -283,7 +257,6 @@ export class Orchestrator {
           return;
         }
 
-        // Fetch and compress the git diff for the changed files
         const rawDiff = this.getGitDiff(result.changedFiles);
         let reviewPromptPath = outputPath;
 
@@ -298,9 +271,8 @@ export class Orchestrator {
           writeFileSync(reviewPromptPath, summary + diffSection, 'utf8');
         }
 
-        const reviewResult = await this.runner.run('reviewer', reviewPromptPath);
+        const reviewResult = await this.runner.run(KNOWN_ROLES.reviewer, reviewPromptPath, result.contextFile);
 
-        // Always persist the review output for the fix round
         const savedOutput = reviewResult.ok ? reviewResult.output : '';
         const reviewOutputPath = join(this.contextDir, `review_output_${result.domain}.md`);
         writeFileSync(reviewOutputPath, savedOutput, 'utf8');
@@ -326,10 +298,6 @@ export class Orchestrator {
       : { passed: true };
   }
 
-  /**
-   * Reads the saved review output for a domain and appends it to the domain's
-   * context file so the coder receives reviewer feedback in the fix round.
-   */
   private appendReviewFeedback(domain: AgentDomain, contextFile: string | undefined): void {
     if (contextFile === undefined) return;
 
@@ -365,10 +333,6 @@ export class Orchestrator {
     }
   }
 
-  /**
-   * Detects conflicting verdicts between two review outputs and logs to conflict_log.md.
-   * Returns true if a conflict was found.
-   */
   detectConflict(verdictA: string, agentA: string, verdictB: string, agentB: string): boolean {
     const CONFLICT_PAIRS: ReadonlyArray<readonly [string, string]> = [
       ['BLOCKED', 'APPROVED'],

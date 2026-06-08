@@ -1,16 +1,16 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
-import { writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { KNOWN_ROLES } from '../types/index.js';
 
 const PORT = Number(process.env['MCP_PORT'] ?? 3456);
 const CLAUDE_DIR = join(homedir(), '.claude');
 const STATS_FILE = join(CLAUDE_DIR, 'token_stats.json');
 const CONTEXT_DIR = join(CLAUDE_DIR, 'context');
 const OLLAMA_SCRIPT = join(CLAUDE_DIR, 'call_ollama.sh');
+const MAX_BODY_BYTES = 1_048_576; // 1 MB
 
 const TOOLS = [
   {
@@ -44,9 +44,17 @@ const TOOLS = [
 ];
 
 function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
+    let totalBytes = 0;
+    req.on('data', (c: Buffer) => {
+      totalBytes += c.length;
+      if (totalBytes > MAX_BODY_BYTES) {
+        reject(new Error('request body too large'));
+        return;
+      }
+      chunks.push(c);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks).toString()));
   });
 }
@@ -74,11 +82,11 @@ function handleTriageTask(task: string): unknown {
   if (!existsSync(OLLAMA_SCRIPT)) return { error: 'call_ollama.sh not found' };
   const tmp = join(tmpdir(), `mcp-triage-${Date.now()}.txt`);
   writeFileSync(tmp, task, 'utf8');
-  const result = spawnSync('bash', [OLLAMA_SCRIPT, '--role', 'triage', '--prompt-file', tmp], {
+  const result = spawnSync('bash', [OLLAMA_SCRIPT, '--role', KNOWN_ROLES.triage, '--prompt-file', tmp], {
     encoding: 'utf8',
     timeout: 60_000,
   });
-  try { require('node:fs').unlinkSync(tmp); } catch { /* ignore */ }
+  try { unlinkSync(tmp); } catch { /* ignore */ }
   return { output: result.stdout.trim(), stderr: result.stderr.trim(), exitCode: result.status };
 }
 
@@ -96,11 +104,12 @@ function handleRunPipeline(prompt: string): unknown {
   if (!existsSync(OLLAMA_SCRIPT)) return { started: false, message: 'call_ollama.sh not found' };
   const tmp = join(tmpdir(), `mcp-pipeline-${Date.now()}.txt`);
   writeFileSync(tmp, prompt, 'utf8');
-  spawnSync('bash', [OLLAMA_SCRIPT, '--role', 'coder', '--prompt-file', tmp], {
-    encoding: 'utf8',
-    timeout: 300_000,
+  const child = spawn('bash', [OLLAMA_SCRIPT, '--role', KNOWN_ROLES.coder, '--prompt-file', tmp], {
+    detached: true,
+    stdio: 'ignore',
   });
-  return { started: true, message: 'Pipeline run completed (synchronous)' };
+  child.unref();
+  return { started: true, message: 'Pipeline started (non-blocking)' };
 }
 
 const server = createServer(async (req, res) => {
@@ -115,7 +124,12 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && url === '/tools/call') {
-    const raw = await readBody(req);
+    let raw: string;
+    try {
+      raw = await readBody(req);
+    } catch {
+      return json(res, 413, { error: 'request body too large' });
+    }
     let body: { name?: string; arguments?: Record<string, string> };
     try {
       body = JSON.parse(raw) as typeof body;

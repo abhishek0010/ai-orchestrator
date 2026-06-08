@@ -37,15 +37,15 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const orchestrator = new Orchestrator(DEFAULT_CONFIG, DEFAULT_CONTEXT_DIR, DEFAULT_PROJECT_ROOT);
-  const { agentResults, reviewOutcome } = await orchestrator.run(domains);
-
-  // Build check runs after code generation
+  // Build check runs before code generation to catch existing errors early
   const buildResult = await runBuildCheck(DEFAULT_PROJECT_ROOT);
   if (!buildResult.passed) {
     process.stderr.write(`[orchestrator] build check failed:\n${buildResult.stderr}\n`);
     process.exit(2);
   }
+
+  const orchestrator = new Orchestrator(DEFAULT_CONFIG, DEFAULT_CONTEXT_DIR, DEFAULT_PROJECT_ROOT);
+  const { agentResults, reviewOutcome } = await orchestrator.run(domains);
 
   console.log(`\n[developer-agent] completed ${agentResults.length} domain(s)`);
 

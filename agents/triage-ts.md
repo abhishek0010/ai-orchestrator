@@ -16,10 +16,12 @@ Given a task description and project context, decide which agent domains need to
 - `unit-tester` — the task changes logic that needs test coverage, or mentions tests
 - `doc-writer` — the task changes a public API, adds a class, or mentions docs/comments
 - `devops` — the task touches CI, deployment, Docker, release, or infrastructure
+- `reviewer` — the task asks to review, audit, or analyze existing code without changing it
 
 ## Reasoning Rules
 
-- Always include `coder` unless the task is purely documentation.
+- Always include `coder` unless the task is purely documentation or a review.
+- If the task is a code review, audit, or quality analysis → use ONLY `reviewer`, no `coder`.
 - If the task changes a class or adds a public method, also include `doc-writer`.
 - If the task changes business logic or adds a new module, also include `unit-tester`.
 - If the task touches CI files, Dockerfiles, or release scripts, include `devops`.

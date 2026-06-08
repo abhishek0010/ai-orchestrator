@@ -2,11 +2,12 @@
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { KNOWN_ROLES } from '../types/index.js';
 
 // Run review pipeline on current git diff via call_ollama.sh reviewer role
 const ollamaScript = join(homedir(), '.claude', 'call_ollama.sh');
 const args = process.argv.slice(2);
-const role = 'reviewer';
+const role = KNOWN_ROLES.reviewer;
 
 // Get current diff into a temp file
 const tmpFile = `/tmp/ao-review-diff-${Date.now()}.md`;

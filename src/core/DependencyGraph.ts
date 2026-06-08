@@ -12,18 +12,10 @@ export class DependencyGraph {
     }
   }
 
-  /**
-   * Kahn's algorithm topological sort.
-   * Returns tasks grouped into parallel execution levels.
-   * Level 0 has no dependencies. Level N depends on N-1.
-   * Throws if a cycle is detected.
-   */
   getLevels(): AgentTask[][] {
     const allTasks = Array.from(this.tasks.values());
 
-    // domain -> count of unsatisfied dependencies
     const inDegree = new Map<AgentDomain, number>();
-    // domain -> list of domains that depend on it
     const dependents = new Map<AgentDomain, AgentDomain[]>();
 
     for (const task of allTasks) {
@@ -65,9 +57,10 @@ export class DependencyGraph {
       current = next;
     }
 
-    const processed = levels.flat().length;
+    const flatLevels = levels.flat();
+    const processed = flatLevels.length;
     if (processed < allTasks.length) {
-      const unresolved = allTasks.filter(t => !levels.flat().includes(t)).map(t => t.domain);
+      const unresolved = allTasks.filter(t => !flatLevels.includes(t)).map(t => t.domain);
       const missingDeps = unresolved.flatMap(domain => {
         const task = this.tasks.get(domain);
 

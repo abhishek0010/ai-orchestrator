@@ -59,6 +59,37 @@ export function writeFilesToProject(files: ParsedFile[], projectRoot: string): s
 }
 
 /**
+ * Static prompt for code review tasks.
+ * Instructs the LLM to analyze code and output a review report in %%FILE format.
+ */
+export const REVIEW_INSTRUCTIONS = `\
+You are a senior code reviewer. Analyze the code provided in the context and produce a comprehensive review report.
+
+CRITICAL: Output ONLY a single file block using this exact format. No text outside the block.
+
+%%FILE review_report.md
+# Code Review Report
+
+## Executive Summary
+<2-3 sentences summarizing overall code quality>
+
+## Issues Found
+<For each issue: file path, line range, severity (P0/P1/P2), description, and concrete fix suggestion>
+
+## Positive Observations
+<What is done well in the codebase>
+
+## Recommendations
+<Prioritized list of improvements>
+%%ENDFILE
+
+Rules:
+- Reference ACTUAL files and line numbers from the code you received
+- Do NOT invent files or issues that are not in the provided code
+- Severity: P0=bug/security, P1=architecture/correctness, P2=style/maintainability
+`;
+
+/**
  * Static prompt that instructs Ollama to output file blocks.
  * Passed as --prompt-file; the task plan is passed as --context-file.
  */

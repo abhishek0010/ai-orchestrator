@@ -1,13 +1,23 @@
-export type AgentDomain = 'coder' | 'unit-tester' | 'doc-writer' | 'devops';
+export const KNOWN_ROLES = {
+  coder:        'coder',
+  unit_tester:  'unit-tester',
+  doc_writer:   'doc-writer',
+  devops:       'devops',
+  reviewer:     'reviewer',
+  triage:       'triage',
+  commit:       'commit',
+  pre_reviewer: 'pre-reviewer',
+} as const;
 
-export const KNOWN_DOMAINS: readonly AgentDomain[] = [
-  'coder',
-  'unit-tester',
-  'doc-writer',
-  'devops',
-];
+// All role string values derived from the single source of truth above
+export type Role = (typeof KNOWN_ROLES)[keyof typeof KNOWN_ROLES];
 
-export type Role = AgentDomain | 'reviewer' | 'triage' | 'commit' | 'pre-reviewer';
+// Subset of keys that are pipeline domains (vs. internal roles like triage/commit)
+const DOMAIN_KEYS = ['coder', 'unit_tester', 'doc_writer', 'devops', 'reviewer'] as const;
+type DomainKey = (typeof DOMAIN_KEYS)[number];
+
+export type AgentDomain = (typeof KNOWN_ROLES)[DomainKey];
+export const KNOWN_DOMAINS = DOMAIN_KEYS.map(k => KNOWN_ROLES[k]) as readonly AgentDomain[];
 
 export type AgentTask = {
   readonly domain: AgentDomain;
@@ -15,12 +25,20 @@ export type AgentTask = {
   readonly contextFile: string | undefined;
 };
 
+export const status = {
+  done: 'done',
+  skipped: 'skipped',
+  failed: 'failed',
+  blocked: 'blocked',
+} as const;
+export type Status = (typeof status)[keyof typeof status];
+
 export type AgentResult = {
   readonly domain: AgentDomain;
   readonly output: string;
   readonly contextFile: string | undefined;
   readonly changedFiles: readonly string[];
-  readonly status: 'done' | 'skipped' | 'failed' | 'blocked';
+  readonly status: Status;
 };
 
 export type RunResult = { ok: true; output: string } | { ok: false; error: string };
