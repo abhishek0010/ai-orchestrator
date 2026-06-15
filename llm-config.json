@@ -29,6 +29,7 @@
     "pre-reviewer": "auto",
     "debugger": "qwen3-coder-next",
     "devops": "auto",
+    "doc-writer": "auto",
     "quick-coder": "qwen3-coder-next",
     "commit": "auto",
     "triage": "auto"
@@ -39,6 +40,7 @@
     "pre-reviewer": "gpt-oss-120b",
     "debugger": "gpt-oss-120b",
     "devops": "gpt-oss-120b",
+    "doc-writer": "gpt-oss-120b",
     "quick-coder": "gpt-oss-120b",
     "commit": "gpt-oss-120b",
     "triage": "gpt-oss-120b"
@@ -49,6 +51,7 @@
     "pre-reviewer": "claude-haiku-4-5-20251001",
     "debugger": "claude-sonnet-4-6",
     "devops": "claude-haiku-4-5-20251001",
+    "doc-writer": "claude-haiku-4-5-20251001",
     "quick-coder": "claude-haiku-4-5-20251001",
     "commit": "claude-haiku-4-5-20251001",
     "triage": "claude-haiku-4-5-20251001",

@@ -2,13 +2,7 @@ Analyze past task outcomes to find recurring reviewer issues and propose targete
 
 ## Instructions
 
-1. If `knowledge/outcomes.jsonl` does not exist or is empty, print:
-
-   ```text
-   No outcome data yet. Run some pipeline tasks first, then re-run /learn.
-   ```
-
-   Stop here.
+1. If `knowledge/outcomes.jsonl` does not exist or is empty, print "No outcome data yet. Run some pipeline tasks first, then re-run /learn." and stop.
 
 2. Read `knowledge/outcomes.jsonl`. Each line is a JSON object with these fields:
    - `task_type` — domain of the task (e.g. `"coder"`, `"doc-writer"`, `"unit-tester"`)
@@ -17,7 +11,7 @@ Analyze past task outcomes to find recurring reviewer issues and propose targete
 3. Count reviewer issues by `task_type`:
 
    ```bash
-   jq -r '.task_type + "\t" + (.reviewer_issues[]? // empty)' knowledge/outcomes.jsonl \
+   jq -r '.task_type + "\t" + (.reviewer_issues[]?)' knowledge/outcomes.jsonl \
      | sort | uniq -c | sort -rn
    ```
 
@@ -28,25 +22,31 @@ Analyze past task outcomes to find recurring reviewer issues and propose targete
    - Agent behavior or workflow issues → `agents/<role>.md`
    - Command format issues → `commands/<name>.md`
 
-6. Propose a specific edit for each issue. Format the output as:
+6. Propose a specific edit for each issue. Format the output as a numbered list:
 
    ```markdown
    ## Learning report — <today's date>
 
    ### <task_type>
 
-   **Issue (N occurrences):** <issue text>
+   **Edit 1 — Issue (N occurrences):** <issue text>
+   **Target file:** `<file path>`
+   **Proposed edit:** <one or two sentences describing the exact rule or example to add>
+
+   ---
+
+   **Edit 2 — Issue (N occurrences):** <issue text>
    **Target file:** `<file path>`
    **Proposed edit:** <one or two sentences describing the exact rule or example to add>
 
    ---
    ```
 
-   Repeat the block for every top issue across all task types.
+   Continue numbering sequentially across all task types (Edit 1, Edit 2, Edit 3 …).
 
 7. Ask the user: "Apply these edits? (yes / select numbers / no)"
    - `yes` — apply all proposed edits using the Edit tool, one file at a time
-   - `select numbers` — apply only the numbered edits the user lists
+   - `select numbers` — enter space-separated edit numbers to apply (e.g. `1 3`), then apply only those
    - `no` — print the report and stop
 
 8. After applying any edits, run `markdownlint-cli2` on every `.md` file changed and fix any errors.
