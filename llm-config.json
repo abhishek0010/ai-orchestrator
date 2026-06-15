@@ -35,6 +35,7 @@
     "triage": "auto"
   },
   "cerebras_api": {
+    "planner": "gpt-oss-120b",
     "coder": "gpt-oss-120b",
     "reviewer": "gpt-oss-120b",
     "pre-reviewer": "gpt-oss-120b",

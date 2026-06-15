@@ -22,6 +22,14 @@ ls knowledge/context-index.md 2>/dev/null
 
 If it exists, read it immediately. It contains: related repos, cross-repo dependencies, architectural decisions, and known constraints. Use it to avoid wrong assumptions about shared code or external systems. Do not re-read it in later phases.
 
+**Discovered skills (auto-generated patterns):** After the knowledge index, check for learned skill files:
+
+```bash
+ls skills/discovered/*.md 2>/dev/null
+```
+
+If any exist, scan their filenames for topic overlap with the current task (e.g. a file named `typescript-20260615.md` is relevant to TypeScript tasks). Read any that match — they contain rules auto-generated from past reviewer feedback. Treat them as addenda to the main language standards: include their rules in `## Key standarts for This Task` in the context file.
+
 Before any exploration, check if `.claude/context/project_overview.md` exists and if an automated delta report is available:
 
 ```bash

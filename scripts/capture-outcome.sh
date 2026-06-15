@@ -50,7 +50,7 @@ TIMESTAMP=$(date +"%Y-%m-%dT%H:%M:%S")
 
 mkdir -p "$(dirname "$OUTCOMES_FILE")"
 
-jq -n \
+jq -cn \
     --arg  date             "$TIMESTAMP" \
     --arg  task             "$TASK" \
     --arg  task_type        "$TASK_TYPE" \
@@ -71,3 +71,10 @@ jq -n \
     }' >> "$OUTCOMES_FILE"
 
 echo "  ✓ Outcome captured: $VERDICT for \"$TASK\" (${FILES_COUNT} file(s), model: $MODEL)"
+
+# Auto-trigger learn.sh every 10 outcomes
+_line_count=$(grep -c '^{' "$OUTCOMES_FILE" 2>/dev/null || echo 0)
+if [ "$_line_count" -gt 0 ] && [ $(( _line_count % 10 )) -eq 0 ]; then
+    bash "$REPO_DIR/scripts/learn.sh" --apply >/dev/null 2>&1 &
+    disown
+fi

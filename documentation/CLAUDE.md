@@ -98,6 +98,7 @@ BLOCKING: Invoke the matching agent/skill before responding.
 - **Infrastructure**: "setup CI/CD", "deploy", "k8s", "docker", "release", "version bump" → [devops](../agents/devops.md), [docker-helper](../plugins/docker-helper/), [k8s-helper](../plugins/k8s-helper/), [release-manager](../plugins/release-manager/)
 - **Database**: "schema", "SQL", "slow query", "ERD" → [architect](../agents/architect.md), [database-tools](../plugins/database-tools/)
 - **AI/Prompts**: "prompt", "analyze AI", "optimize instruction" → [ai-engineering](../plugins/ai-engineering/)
+- **UI/UX Design**: "design", "UI style", "color palette", "typography", "landing page", "color scheme", "font pairing", "glassmorphism", "dark mode", "component design", "layout", "design system", "redesign", "UI looks", "не профессионально", "улучши дизайн" → [ui-designer](../agents/ui-designer.md), `skills/ui-ux-pro-max/SKILL.md`
 - **Specialized**:
   - Python: "Python idioms", "PEP 8", "type hints" → [python-expert](../plugins/python-expert/)
   - Accessibility: "ARIA", "screen reader", "a11y" → [ui-tester](../agents/ui-tester.md), [accessibility](../plugins/accessibility/)
