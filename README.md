@@ -33,6 +33,47 @@ Step 6   Finalize    git diff + track savings
 
 Agents communicate through files in `.claude/context/`. Each step reads file paths from the previous step, not the full content.
 
+## Self-learning loop
+
+After every pipeline run the orchestrator records what happened and uses it to improve future reviews automatically.
+
+```text
+Pipeline run
+  └─► capture-outcome.sh      ──► knowledge/outcomes.jsonl
+        │  (task, verdict, reviewer_issues, model, duration)
+        │
+        ├─► embed-outcomes.sh  ──► knowledge/embeddings.jsonl
+        │     (mxbai-embed-large via Ollama, runs in background)
+        │
+        └─► learn.sh --apply   ──► skills/discovered/<type>-<date>.md
+              (auto-triggered every 10 outcomes)
+```
+
+| Script | What it does |
+|---|---|
+| `capture-outcome.sh` | Appends one JSON record per run: task, verdict, files changed, reviewer issues, model, duration |
+| `embed-outcomes.sh` | Generates Ollama vector embeddings for each outcome; skips already-embedded records |
+| `semantic-search.sh` | Cosine-similarity search over `embeddings.jsonl`; returns top-k similar past outcomes |
+| `learn.sh` | Finds recurring reviewer issues (≥ 3 occurrences), calls Ollama reviewer to draft a skill amendment, writes it to `skills/discovered/` |
+
+Every 10 captured outcomes `learn.sh --apply` fires automatically (background, no blocking). Discovered amendments land in `skills/discovered/` and are picked up by the reviewer on the next run.
+
+Run manually:
+
+```bash
+# Dry-run: print proposed amendments without writing files
+bash scripts/learn.sh
+
+# Apply: write amendments to skills/discovered/
+bash scripts/learn.sh --apply
+
+# Query: find issues similar to a specific task description
+bash scripts/learn.sh --query "add authentication middleware"
+
+# Semantic search standalone
+bash scripts/semantic-search.sh --query "TypeScript type errors" --top-k 3
+```
+
 ## Source layout
 
 ```text
