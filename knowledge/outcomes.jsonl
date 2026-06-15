@@ -1,14 +1,3 @@
 # append-only JSON Lines log — one outcome record per line; fields: date (ISO 8601), task, task_type, files_changed (int), verdict (APPROVED|NEEDS_CHANGES), model, reviewer_issues (array), duration_s (int)
-{
-  "date": "2026-06-15T19:28:21",
-  "task": "test run",
-  "task_type": "typescript",
-  "files_changed": 2,
-  "verdict": "APPROVED",
-  "model": "gpt-oss-120b",
-  "reviewer_issues": [
-    "missing mkdir-p guard",
-    "hardcoded verdict"
-  ],
-  "duration_s": 42
-}
+{"date":"2026-06-15T19:28:21","task":"test run","task_type":"typescript","files_changed":2,"verdict":"APPROVED","model":"gpt-oss-120b","reviewer_issues":["missing mkdir-p guard","hardcoded verdict"],"duration_s":42}
+{"date":"2026-06-15T20:14:11","task":"verify compact format","task_type":"bash","files_changed":1,"verdict":"APPROVED","model":"test","reviewer_issues":[],"duration_s":0}

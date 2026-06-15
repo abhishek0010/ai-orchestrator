@@ -1,7 +1,7 @@
 ---
 name: ui-designer
 description: UI/UX Design Intelligence specialist. Chooses UI styles, color palettes, typography, component patterns, and layout systems for web and mobile. Uses the ui-ux-pro-max searchable knowledge base.
-tools: Read, Write, Glob, Grep, Bash
+tools: Read, Write, Glob, Grep, Bash, Browser, mcp__playwright__*
 ---
 
 # UI Designer Agent

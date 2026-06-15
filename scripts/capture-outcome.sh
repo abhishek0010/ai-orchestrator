@@ -78,3 +78,9 @@ if [ "$_line_count" -gt 0 ] && [ $(( _line_count % 10 )) -eq 0 ]; then
     bash "$REPO_DIR/scripts/learn.sh" --apply >/dev/null 2>&1 &
     disown
 fi
+
+# Auto-trigger embed-outcomes.sh if Ollama is available
+if curl -s --max-time 2 http://localhost:11434/api/tags >/dev/null 2>&1; then
+    bash "$REPO_DIR/scripts/embed-outcomes.sh" >/dev/null 2>&1 &
+    disown
+fi
