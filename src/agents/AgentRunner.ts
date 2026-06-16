@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Role, RunResult } from '../types/index.js';
+import { pruneContextFile } from '../core/ContextPruner.js';
 
 const CALL_OLLAMA_SCRIPT = join(homedir(), '.claude', 'call_ollama.sh');
 
@@ -34,15 +35,32 @@ export class AgentRunner {
       return { ok: false, error: `prompt file not found: ${promptFile}` };
     }
 
+    let effectiveContextFile = contextFile;
+    let tempDir: string | undefined;
+
+    if (contextFile !== undefined && existsSync(contextFile)) {
+      const pruned = await pruneContextFile(contextFile);
+      if (pruned.wasPruned) {
+        tempDir = mkdtempSync(join(tmpdir(), 'ao-ctx-'));
+        const tempFile = join(tempDir, 'context.md');
+        writeFileSync(tempFile, pruned.content, 'utf8');
+        effectiveContextFile = tempFile;
+      }
+    }
+
     let lastResult: RunResult = { ok: false, error: 'no attempts made' };
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      if (attempt > 0) {
-        process.stderr.write(`[agent-runner] retry ${attempt}/${MAX_RETRIES} for role="${role}"\n`);
-        await new Promise<void>(r => setTimeout(r, attempt * RETRY_DELAY_MS));
+    try {
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (attempt > 0) {
+          process.stderr.write(`[agent-runner] retry ${attempt}/${MAX_RETRIES} for role="${role}"\n`);
+          await new Promise<void>(r => setTimeout(r, attempt * RETRY_DELAY_MS));
+        }
+        lastResult = await this.runOnce(role, promptFile, effectiveContextFile);
+        if (lastResult.ok) return lastResult;
       }
-      lastResult = await this.runOnce(role, promptFile, contextFile);
-      if (lastResult.ok) return lastResult;
+    } finally {
+      if (tempDir !== undefined) rmSync(tempDir, { recursive: true, force: true });
     }
 
     return lastResult;
