@@ -93,3 +93,18 @@ export type ClusterConfig = {
   readonly exo: { readonly model: string; readonly gateway: ExoGateway };
   readonly nodes: readonly ClusterNode[];
 };
+
+export type GoalStatus = 'pending' | 'running' | 'done' | 'failed';
+
+export type Goal = {
+  readonly id: string;
+  readonly description: string;
+  readonly domains?: readonly AgentDomain[];
+  readonly projectRoot: string;
+  status: GoalStatus;
+  readonly createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  result?: string;
+  error?: string;
+};
