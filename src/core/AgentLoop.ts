@@ -1,20 +1,17 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { GoalQueue } from './GoalQueue.js';
 import { Orchestrator } from './Orchestrator.js';
 import { runBuildCheck } from './BuildChecker.js';
+import { PlannerSession } from './PlannerSession.js';
 import { TriageAgent } from '../agents/TriageAgent.js';
 import { AgentRunner } from '../agents/AgentRunner.js';
-import { KNOWN_DOMAINS, KNOWN_ROLES } from '../types/index.js';
+import { KNOWN_DOMAINS } from '../types/index.js';
 import type { AgentDomain, Goal } from '../types/index.js';
 
 const DEFAULT_POLL_MS = 10_000;
 const DEFAULT_CONFIG = 'llm-config.json';
-
-const CONTEXT_MARKER_BEGIN = '---BEGIN TASK_CONTEXT---';
-const CONTEXT_MARKER_END = '---END TASK_CONTEXT---';
 
 function sleep(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
@@ -25,12 +22,14 @@ export class AgentLoop {
   private readonly runner: AgentRunner;
   private readonly projectRoot: string;
   private readonly contextDir: string;
+  private readonly agentsDir: string;
   private readonly pollMs: number;
   private active = false;
 
   constructor(projectRoot: string, pollMs = DEFAULT_POLL_MS) {
     this.projectRoot = resolve(projectRoot);
     this.contextDir = join(this.projectRoot, '.claude/context');
+    this.agentsDir = join(this.projectRoot, 'agents');
     this.pollMs = pollMs;
     this.queue = new GoalQueue(this.projectRoot);
     this.runner = new AgentRunner();
@@ -121,112 +120,51 @@ export class AgentLoop {
   }
 
   /**
-   * Runs the planner role via local LLM with embedded project context
-   * (project_overview.md + file tree + coding standards).
-   * This mirrors the /implement flow planner step, adapted for tool-less execution.
-   * The LLM must output task_context.md content between CONTEXT_MARKER_BEGIN/END.
-   * Returns true if a non-empty task_context.md was written.
+   * Runs the planner as a real agent loop with tool access.
+   * The planner reads files, greps the codebase, and calls write_task_context when done.
+   * This replicates the /implement flow planner step.
    */
   private async runPlanner(description: string, domains: AgentDomain[]): Promise<boolean> {
-    process.stderr.write('[agent-loop] running planner\n');
+    process.stderr.write('[agent-loop] running planner (tool-access mode)\n');
 
-    const prompt = this.buildPlannerPrompt(description, domains);
-    const tmpDir = mkdtempSync(join(tmpdir(), 'agent-loop-planner-'));
-
-    try {
-      const promptFile = join(tmpDir, 'planner_prompt.txt');
-      writeFileSync(promptFile, prompt, 'utf8');
-
-      const result = await this.runner.run(KNOWN_ROLES.planner, promptFile);
-      if (!result.ok) {
-        process.stderr.write(`[agent-loop] planner LLM error: ${result.error}\n`);
-        return false;
-      }
-
-      const taskContext = this.extractTaskContext(result.output);
-      if (taskContext.trim().length === 0) {
-        process.stderr.write('[agent-loop] planner output did not contain task_context markers\n');
-        return false;
-      }
-
-      writeFileSync(join(this.contextDir, 'task_context.md'), taskContext, 'utf8');
-      process.stderr.write('[agent-loop] planner wrote task_context.md\n');
-      return true;
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
+    const systemPrompt = this.readPlannerSystemPrompt();
+    if (systemPrompt === null) {
+      process.stderr.write('[agent-loop] planner system prompt not found (agents/planner.md)\n');
+      return false;
     }
-  }
 
-  /** Extracts content between CONTEXT_MARKER_BEGIN and CONTEXT_MARKER_END from planner output. */
-  private extractTaskContext(output: string): string {
-    const begin = output.indexOf(CONTEXT_MARKER_BEGIN);
-    const end = output.indexOf(CONTEXT_MARKER_END);
-    if (begin === -1 || end === -1 || end <= begin) return '';
-    return output.slice(begin + CONTEXT_MARKER_BEGIN.length, end).trim() + '\n';
-  }
-
-  /**
-   * Builds a rich planning prompt that embeds project context so the planner LLM
-   * can produce a proper task_context.md without live tool access.
-   */
-  private buildPlannerPrompt(description: string, domains: AgentDomain[]): string {
-    const overview = this.readFileOrEmpty(join(this.contextDir, 'project_overview.md'));
-    const fileTree = this.getFileTree();
-    const standards = this.readCodingStandards();
-
-    return [
-      '## Goal',
+    const userMessage = [
+      '## Task',
       description,
       '',
       '## Target Domains',
       domains.map(d => `- ${d}`).join('\n'),
       '',
-      '## Project Overview',
-      overview || '(project_overview.md not found)',
-      '',
-      '## Source Tree',
-      '```',
-      fileTree,
-      '```',
-      '',
-      ...(standards.length > 0 ? ['## Coding Standards (excerpt)', standards, ''] : []),
-      '## Instructions',
-      'You do NOT have live tool access. Use ONLY the context above to write the plan.',
-      'Follow the task_context.md format from your system prompt exactly.',
-      `Output the complete task_context.md content between these exact markers (no extra text outside):`,
-      CONTEXT_MARKER_BEGIN,
-      '# Task Context',
-      '...',
-      CONTEXT_MARKER_END,
+      'Read the codebase, understand the task, then call write_task_context with the completed task_context.md.',
     ].join('\n');
-  }
 
-  private readFileOrEmpty(filePath: string): string {
-    if (!existsSync(filePath)) return '';
-    try {
-      return readFileSync(filePath, 'utf8');
-    } catch {
-      return '';
+    const session = new PlannerSession(this.projectRoot, this.contextDir, systemPrompt);
+    const result = await session.run(userMessage);
+
+    if (!result.ok) {
+      process.stderr.write(`[agent-loop] planner failed: ${result.error}\n`);
+      return false;
     }
+
+    process.stderr.write('[agent-loop] planner wrote task_context.md\n');
+    return true;
   }
 
-  private getFileTree(): string {
-    const result = spawnSync('find', ['src', '-type', 'f', '-name', '*.ts'], {
-      cwd: this.projectRoot,
-      encoding: 'utf8',
-    });
-    return result.stdout?.trim() ?? '';
-  }
-
-  private readCodingStandards(): string {
-    const standardsPath = join(this.projectRoot, '.claude/skills/ts-code-standarts.md');
-    if (!existsSync(standardsPath)) return '';
-    try {
-      const content = readFileSync(standardsPath, 'utf8');
-      return content.slice(0, 3000);
-    } catch {
-      return '';
+  private readPlannerSystemPrompt(): string | null {
+    const paths = [
+      join(this.agentsDir, 'planner.md'),
+      join(homedir(), '.claude', 'agents', 'planner.md'),
+    ];
+    for (const p of paths) {
+      if (!existsSync(p)) continue;
+      try { return readFileSync(p, 'utf8'); } catch { /* try next */ }
     }
+    return null;
   }
 
   private async resolveDomains(goal: Goal): Promise<AgentDomain[]> {
