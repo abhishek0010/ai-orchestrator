@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { AgentDomain, Goal, GoalStatus } from '../types/index.js';
 
-type Result = { ok: boolean; error?: string };
 
 export class GoalQueue {
   private readonly queueFile: string;
@@ -70,12 +69,11 @@ export class GoalQueue {
     return count;
   }
 
-  pushMany(goals: readonly Goal[]): Result {
-    for (const g of goals) {
-      const res = this.push(g.description, g.domains);
-      if (!res.ok) return { ok: false, error: `failed to push goal ${g.id}: ${res.error}` };
-    }
-    return { ok: true };
+  /** Atomically enqueue pre-built Goal objects (used by decompose_goal tool). */
+  pushMany(newGoals: readonly Goal[]): void {
+    if (newGoals.length === 0) return;
+    const existing = this.readAll();
+    this.writeAll([...existing, ...newGoals]);
   }
 
   nextReady(): Goal | null {

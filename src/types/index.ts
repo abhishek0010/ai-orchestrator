@@ -111,3 +111,4 @@ export type Goal = {
   readonly parentId?: string;
   readonly dependsOn?: readonly string[];
 };
+

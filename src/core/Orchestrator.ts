@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { AgentRunner } from '../agents/AgentRunner.js';
 import { loadClusterConfig } from './ExoConfigLoader.js';
@@ -140,7 +140,7 @@ export class Orchestrator {
     const instructionFile = join(this.contextDir, 'codegen_instructions.md');
     writeFileSync(instructionFile, CODE_GEN_INSTRUCTIONS, 'utf8');
     const reviewInstructionFile = join(this.contextDir, 'review_instructions.md');
-    writeFileSync(reviewInstructionFile, REVIEW_INSTRUCTIONS, 'utf8');
+    writeFileSync(reviewInstructionFile, REVIEW_INSTRUCTIONS + this.loadDiscoveredPatterns(), 'utf8');
 
     for (const level of levels) {
       console.log(`[developer-agent] executing: ${level.map(t => t.domain).join(', ')}`);
@@ -287,6 +287,7 @@ export class Orchestrator {
           writeFileSync(reviewPromptPath, summary + diffSection, 'utf8');
         }
 
+        const reviewStartedAt = Date.now();
         const reviewResult = await this.runner.run(KNOWN_ROLES.reviewer, reviewPromptPath, result.contextFile);
 
         const savedOutput = reviewResult.ok ? reviewResult.output : '';
@@ -295,15 +296,18 @@ export class Orchestrator {
 
         if (!reviewResult.ok) {
           failedDomains.push(result.domain);
+          this.captureOutcome(result, 'NEEDS_CHANGES', '', reviewStartedAt);
           process.stderr.write(
             `[developer-agent] review failed for ${result.domain}: ${reviewResult.error}\n`,
           );
         } else if (NEEDS_CHANGES_RE.test(reviewResult.output)) {
           failedDomains.push(result.domain);
+          this.captureOutcome(result, 'NEEDS_CHANGES', savedOutput, reviewStartedAt);
           process.stderr.write(
             `[developer-agent] review for ${result.domain}: NEEDS CHANGES — queued for fix round\n`,
           );
         } else {
+          this.captureOutcome(result, 'APPROVED', savedOutput, reviewStartedAt);
           console.log(`[developer-agent] reviewed ${result.domain}: ok`);
         }
       }),
@@ -347,6 +351,97 @@ export class Orchestrator {
         `[developer-agent] could not append feedback to ${contextFile}: ${String(err)}\n`,
       );
     }
+  }
+
+  /**
+   * Reads skills/discovered/*.md and returns them as an appendix to the reviewer prompt.
+   * Mirrors ReviewEngine.loadDiscoveredPatterns() from be-agent: every pattern has an explicit
+   * read point in the same execution path that generated it.
+   */
+  private loadDiscoveredPatterns(): string {
+    const dir = join(this.projectRoot, 'skills', 'discovered');
+    if (!existsSync(dir)) return '';
+    let files: string[];
+    try {
+      files = readdirSync(dir).filter(f => f.endsWith('.md')).sort();
+    } catch {
+      return '';
+    }
+    if (files.length === 0) return '';
+    const sections: string[] = [];
+    for (const f of files) {
+      try {
+        const content = readFileSync(join(dir, f), 'utf8').trim();
+        if (content.length > 0) sections.push(content);
+      } catch { /* skip unreadable files */ }
+    }
+    if (sections.length === 0) return '';
+    return (
+      '\n\n---\n\n## Discovered Patterns (auto-learned from past reviews)\n\n' +
+      'These patterns were extracted from recurring reviewer issues. Apply them as additional checks.\n\n' +
+      sections.join('\n\n---\n\n')
+    );
+  }
+
+  /**
+   * Appends one outcome record to knowledge/outcomes.jsonl via capture-outcome.sh.
+   * Mirrors PipelineHooks.postReview() from be-agent: called automatically after every review,
+   * never manually. Best-effort — never throws.
+   */
+  private captureOutcome(
+    result: AgentResult,
+    verdict: 'APPROVED' | 'NEEDS_CHANGES',
+    reviewOutput: string,
+    reviewStartedAt: number,
+  ): void {
+    try {
+      const scriptPath = join(this.projectRoot, 'scripts', 'capture-outcome.sh');
+      if (!existsSync(scriptPath)) return;
+
+      const durationS = Math.round((Date.now() - reviewStartedAt) / 1000);
+      const files = result.changedFiles.join(' ');
+
+      // Extract task description from the context file (## Task section)
+      let task: string = result.domain;
+      if (result.contextFile !== undefined) {
+        try {
+          const ctx = readFileSync(result.contextFile, 'utf8');
+          const m = /##\s+Task\s*\n([^\n]+)/.exec(ctx);
+          if (m?.[1] !== undefined) task = m[1].trim();
+        } catch { /* ignore */ }
+      }
+
+      // Extract reviewer issues (bullet points from review output, comma-separated)
+      const issues = reviewOutput
+        .split('\n')
+        .filter(l => /^[-*]\s+.{10,}/.test(l))
+        .slice(0, 5)
+        .map(l => l.replace(/^[-*]\s+/, '').replace(/,/g, ';').trim())
+        .join(',');
+
+      // Get reviewer model from llm-config.json
+      let model = 'unknown';
+      try {
+        const cfg = JSON.parse(
+          readFileSync(join(this.projectRoot, 'llm-config.json'), 'utf8'),
+        ) as Record<string, unknown>;
+        const models = cfg['models'] as Record<string, string> | undefined;
+        model = models?.['reviewer'] ?? 'unknown';
+      } catch { /* ignore */ }
+
+      const args = [
+        scriptPath,
+        '--task', task,
+        '--task-type', 'typescript',
+        '--files', files,
+        '--verdict', verdict,
+        '--model', model,
+        '--duration-s', String(durationS),
+      ];
+      if (issues.length > 0) args.push('--reviewer-issues', issues);
+
+      spawnSync('bash', args, { cwd: this.projectRoot, timeout: 5_000 });
+    } catch { /* best-effort — never break the pipeline */ }
   }
 
   /**
