@@ -7,6 +7,7 @@ export const KNOWN_ROLES = {
   triage:       'triage',
   commit:       'commit',
   pre_reviewer: 'pre-reviewer',
+  planner:      'planner',
 } as const;
 
 // All role string values derived from the single source of truth above
