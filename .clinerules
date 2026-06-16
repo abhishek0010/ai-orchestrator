@@ -1,0 +1,66 @@
+# Velxon / AI Orchestrator — Cline Rules
+
+## Project Stack
+- TypeScript (tsconfig.json present)
+- Node.js scripts in scripts/
+- Agents defined in agents/*.md
+- Skills defined in skills/
+
+## Coding Pipeline
+
+For any non-trivial coding task, run the pipeline script — it handles triage, planning, coding, and review automatically via Ollama:
+
+```bash
+bash scripts/run_pipeline.sh "<task description>"
+```
+
+Wait for it to finish, then show the user the output. Do NOT manually replicate the pipeline steps — the script does it all.
+
+For simple single-file edits, make the change directly without the pipeline.
+
+## Agent Trigger Rules
+
+Read the corresponding agent file before acting on these tasks:
+
+| Task type | Agent file to read |
+|---|---|
+| Planning, architecture, approach | `agents/planner.md` |
+| Writing code, implementing features | `agents/coder.md` |
+| Code review, quality check | `agents/reviewer.md` |
+| Git commit, PR, staging | `agents/commit.md` |
+| Bug fix, root cause analysis | `agents/debugger.md` |
+| System design, refactoring | `agents/architect.md` |
+| CI/CD, Docker, deployment | `agents/devops.md` |
+| Documentation | `agents/doc-writer.md` |
+| Security audit | `agents/security-auditor.md` |
+| Tests | `agents/qa-orchestrator.md` |
+
+## Skills (load when relevant)
+
+| Area | Skill file |
+|---|---|
+| TypeScript standards | `skills/ts-code-standarts.md` |
+| API design | `skills/api-design-patterns/SKILL.md` |
+| Docker | `skills/docker-best-practices/SKILL.md` |
+| CI/CD | `skills/ci-cd-pipelines/SKILL.md` |
+| LLM integration | `skills/llm-integration/SKILL.md` |
+| Security | `skills/security-hardening/SKILL.md` |
+
+## Key Constraints
+
+- Never edit `.sh` scripts directly — use the coder agent workflow
+- Never add npm/Python dependencies without explicit approval
+- Always use `jq` for JSON processing in shell scripts
+- Context files go in `.claude/context/`
+- Never commit directly to main — use feature branches
+
+## Project Structure (key paths)
+
+```
+agents/       — agent instructions
+skills/       — coding standards & expertise
+scripts/      — shell automation
+src/          — TypeScript source
+tickets/      — task tickets
+.claude/      — Claude Code config and context
+```

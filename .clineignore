@@ -1,0 +1,26 @@
+# Heavy generated files — excluded to avoid context bloat
+graphify-out/
+node_modules/
+CHANGELOG.md
+
+# Large auto-generated caches and locks
+*.lock
+package-lock.json
+
+# Binary and media files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Build artifacts
+dist/
+build/
+.next/
+.cache/
