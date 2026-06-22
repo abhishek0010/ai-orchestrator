@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { getHeadroomStats, isHeadroomAvailable } from '../core/HeadroomBridge.js';
 
 interface Run {
   date?: string;
@@ -59,3 +60,25 @@ summarize(week);
 console.log('\n--- All time ---');
 summarize(runs);
 console.log();
+
+void (async () => {
+  if (!isHeadroomAvailable()) {
+    console.log('--- Headroom ---');
+    console.log('  headroom: not installed (run: pip install git+https://github.com/headroomlabs-ai/headroom.git)');
+    console.log();
+    return;
+  }
+
+  const headroom = await getHeadroomStats();
+  if (headroom === null) return;
+
+  const compressed = typeof headroom['compressed'] === 'number' ? headroom['compressed'] : 0;
+  const avgRatio = typeof headroom['avg_ratio'] === 'number' ? headroom['avg_ratio'] : 0;
+  const savedUsd = typeof headroom['saved_usd'] === 'number' ? headroom['saved_usd'] : 0;
+
+  console.log('--- Headroom ---');
+  console.log(`  compressed:  ${String(compressed)} sessions`);
+  console.log(`  avg ratio:   ${(avgRatio * 100).toFixed(1)}%`);
+  console.log(`  saved:       ~$${savedUsd.toFixed(2)}`);
+  console.log();
+})();

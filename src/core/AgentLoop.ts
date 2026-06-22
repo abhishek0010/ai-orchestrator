@@ -7,11 +7,13 @@ import { runBuildCheck } from './BuildChecker.js';
 import { PlannerSession } from './PlannerSession.js';
 import { TriageAgent } from '../agents/TriageAgent.js';
 import { AgentRunner } from '../agents/AgentRunner.js';
+import { ToolRunner } from './ToolRunner.js';
 import { KNOWN_DOMAINS } from '../types/index.js';
 import type { AgentDomain, Goal } from '../types/index.js';
 
 const DEFAULT_POLL_MS = 10_000;
 const DEFAULT_CONFIG = 'llm-config.json';
+const MAX_RETRY_COUNT = 3;
 
 function sleep(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
@@ -24,6 +26,7 @@ export class AgentLoop {
   private readonly contextDir: string;
   private readonly agentsDir: string;
   private readonly pollMs: number;
+  private readonly toolRunner: ToolRunner;
   private active = false;
 
   constructor(projectRoot: string, pollMs = DEFAULT_POLL_MS) {
@@ -33,6 +36,7 @@ export class AgentLoop {
     this.pollMs = pollMs;
     this.queue = new GoalQueue(this.projectRoot);
     this.runner = new AgentRunner();
+    this.toolRunner = new ToolRunner(this.projectRoot, this.contextDir);
     mkdirSync(this.contextDir, { recursive: true });
   }
 
@@ -104,6 +108,14 @@ export class AgentLoop {
         .map(r => `${r.domain}[${r.status}]: ${r.changedFiles.join(', ') || '(no files)'}`)
         .join('\n');
 
+      // Step 5: ObserveLoop — run tests, handle failures with retries
+      const observeLoopPassed = await this.observeLoop(goal, 0);
+      if (!observeLoopPassed) {
+        this.queue.fail(goal.id, `test retries exhausted\n${summary}`);
+        process.stderr.write(`[agent-loop] goal ${goal.id.slice(0, 8)} — observe loop failed\n`);
+        return;
+      }
+
       if (reviewOutcome.passed) {
         this.queue.complete(goal.id, summary);
         process.stderr.write(`[agent-loop] goal ${goal.id.slice(0, 8)} — done\n`);
@@ -117,6 +129,60 @@ export class AgentLoop {
       this.queue.fail(goal.id, msg);
       process.stderr.write(`[agent-loop] goal ${goal.id.slice(0, 8)} error: ${msg}\n`);
     }
+  }
+
+  private async observeLoop(goal: Goal, retryCount: number): Promise<boolean> {
+    if (retryCount >= MAX_RETRY_COUNT) {
+      process.stderr.write(`[observe-loop] retry budget exhausted (tried ${MAX_RETRY_COUNT} times)\n`);
+      return false;
+    }
+
+    const testResults = await this.runTestSuite(goal);
+    const failures = this.parseFailures(testResults);
+
+    if (failures.length === 0) {
+      process.stderr.write('[observe-loop] no failures detected\n');
+      return true;
+    }
+
+    process.stderr.write(`[observe-loop] found ${failures.length} failure(s), retry ${retryCount + 1}/${MAX_RETRY_COUNT}\n`);
+
+    if (typeof goal.taskContext === 'string') {
+      goal.taskContext += `\n\n## Test Failures (Retry ${retryCount + 1})\n${failures.join('\n')}`;
+    }
+
+    // Re-run coder with updated context
+    await this.coder(goal);
+
+    return await this.observeLoop(goal, retryCount + 1);
+  }
+
+  private async runTestSuite(goal: Goal): Promise<string> {
+    const testCommand = goal.testCommand ?? 'npm test';
+    try {
+      return await this.toolRunner.run_command(testCommand);
+    } catch (err) {
+      return `[error] running test suite: ${err instanceof Error ? err.message : String(err)}`;
+    }
+  }
+
+  private parseFailures(testResults: string): string[] {
+    const lines = testResults.split('\n');
+    const failures: string[] = [];
+
+    for (const line of lines) {
+      if (/FAILED|Error:|FAIL|panic:/i.test(line)) {
+        failures.push(line.trim());
+      }
+    }
+
+    return failures;
+  }
+
+  private async coder(goal: Goal): Promise<void> {
+    const configPath = join(this.projectRoot, DEFAULT_CONFIG);
+    const orchestrator = new Orchestrator(configPath, this.contextDir, this.projectRoot);
+    await orchestrator.run(['coder']);
   }
 
   /**
@@ -179,5 +245,3 @@ export class AgentLoop {
     return [...result.domains];
   }
 }
-
-

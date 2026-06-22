@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { compressWithHeadroom } from './HeadroomBridge.js';
 
 // Total character budget for context passed to Ollama (~20k tokens at 2.5 chars/token)
 const DEFAULT_BUDGET = 50_000;
@@ -12,6 +13,7 @@ export type PruneResult = {
   readonly originalChars: number;
   readonly prunedChars: number;
   readonly wasPruned: boolean;
+  readonly headroomChars?: number;  // chars after headroom compression; absent if not applied
 };
 
 /**
@@ -31,7 +33,13 @@ export async function pruneContextFile(
   const originalChars = content.length;
 
   if (originalChars <= maxChars) {
-    return { content, originalChars, prunedChars: 0, wasPruned: false };
+    const base: PruneResult = { content, originalChars, prunedChars: 0, wasPruned: false };
+    const compressed = await compressWithHeadroom(content);
+    if (compressed === content) return base;
+    process.stderr.write(
+      `[ContextPruner] headroom: ${content.length}chars → ${compressed.length}chars\n`,
+    );
+    return { ...base, content: compressed, headroomChars: compressed.length };
   }
 
   const sections = splitSections(content);
@@ -70,13 +78,20 @@ export async function pruneContextFile(
     : `[CONTEXT PRUNED: trimmed to ${maxChars} chars]\n\n`;
 
   const pruned = notice + kept.map(k => k.text).join('\n');
-  const prunedChars = originalChars - pruned.length;
+  const prunedChars = Math.max(0, originalChars - pruned.length);
 
   process.stderr.write(
     `[ContextPruner] ${originalChars}→${pruned.length} chars (${prunedCount} sections dropped)\n`,
   );
 
-  return { content: pruned, originalChars, prunedChars, wasPruned: true };
+  const base: PruneResult = { content: pruned, originalChars, prunedChars, wasPruned: true };
+  const compressed = await compressWithHeadroom(pruned);
+  if (compressed === pruned) return base;
+
+  process.stderr.write(
+    `[ContextPruner] headroom: ${pruned.length}chars → ${compressed.length}chars\n`,
+  );
+  return { ...base, content: compressed, headroomChars: compressed.length };
 }
 
 type Section = { readonly header: string; readonly text: string };

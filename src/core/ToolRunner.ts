@@ -143,6 +143,15 @@ export class ToolRunner {
     return this.taskContextContent;
   }
 
+  async run_command(command: string): Promise<string> {
+    const whitelistedCommands = ['npm test', 'npx tsc', 'pytest', 'go test'];
+    if (!whitelistedCommands.includes(command)) {
+      throw new Error(`Command not whitelisted: ${command}`);
+    }
+    const result = spawnSync(command, [], { encoding: 'utf8', cwd: this.projectRoot, shell: true });
+    return result.stdout ?? result.stderr ?? '';
+  }
+
   private decomposeGoal(args: Record<string, unknown>): string {
     const goalDesc = String(args['goal'] ?? '');
     if (!goalDesc.trim()) {
@@ -154,6 +163,7 @@ export class ToolRunner {
         projectRoot: this.projectRoot,
         status: 'pending' as GoalStatus,
         createdAt: now,
+        retryCount: 0,
       };
       const lines = goalDesc
         .split('\n')
@@ -255,5 +265,3 @@ export class ToolRunner {
     }
   }
 }
-
-

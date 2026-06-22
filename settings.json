@@ -1,5 +1,27 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport sys, json, subprocess, os\nd = json.load(sys.stdin)\nf = d.get('tool_input', {}).get('file_path', '')\nif '/skills/' in f and f.endswith('SKILL.md'):\n    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts', 'skillspector_lite.py')\n    r = subprocess.run(['python3', script, f], capture_output=True, text=True)\n    if r.returncode != 0:\n        print(r.stdout)\n\"",
+            "statusMessage": "SkillSpector: scanning new skill..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "headroom init hook ensure 2>/dev/null || true",
+            "statusMessage": "Headroom: checking context..."
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",

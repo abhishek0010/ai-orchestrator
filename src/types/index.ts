@@ -110,5 +110,7 @@ export type Goal = {
   error?: string;
   readonly parentId?: string;
   readonly dependsOn?: readonly string[];
+  retryCount?: number;
+  taskContext?: string;
+  testCommand?: string;
 };
-
