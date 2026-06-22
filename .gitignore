@@ -1,5 +1,6 @@
 .claude/settings.json
-.claude/context/
+.claude/context/*
+!.claude/context/project_overview.md
 .claude/llm-config.json
 /dist
 /node_modules
