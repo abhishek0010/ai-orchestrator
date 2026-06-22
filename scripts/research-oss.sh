@@ -410,6 +410,59 @@ BEST=$(jq -r '[.[] | select(.verdict == "ADOPT")] | sort_by(-.score) | .[0].full
 
 log "Report written: $REPORT_FILE"
 
+# ─── Phase 4.5: Generate tickets for ADOPT verdicts ──────────────────────────
+
+TICKETS_DIR="$REPO_DIR/tickets"
+mkdir -p "$TICKETS_DIR"
+
+# Find next ticket number
+NEXT_NUM=$(ls "$TICKETS_DIR"/*.md 2>/dev/null \
+  | grep -oE '^.*/([0-9]+)-' | grep -oE '[0-9]+' | sort -n | tail -1 || echo "0")
+NEXT_NUM=$(( NEXT_NUM + 1 ))
+
+TICKETS_CREATED=0
+jq -c '[.[] | select(.verdict == "ADOPT")] | sort_by(-.score) | .[]' "$TOP_FILE" \
+  | while IFS= read -r repo; do
+    FULL_NAME=$(echo "$repo" | jq -r '.full_name')
+    REPO_SHORT=$(echo "$FULL_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+    STARS=$(echo "$repo" | jq -r '.stars')
+    LANGUAGE=$(echo "$repo" | jq -r '.language')
+    SCORE=$(echo "$repo" | jq -r '.score')
+    REASON=$(echo "$repo" | jq -r '.reason // ""')
+    ANALYSIS_FILE="$ANALYSES_DIR/$(echo "$FULL_NAME" | tr '/' '_').md"
+
+    TICKET_NUM=$(printf '%03d' "$NEXT_NUM")
+    TICKET_SLUG=$(echo "$REPO_SHORT" | sed 's/[^a-z0-9-]/-/g')
+    TICKET_FILE="$TICKETS_DIR/${TICKET_NUM}-${TICKET_SLUG}.md"
+
+    {
+      printf '# %s — %s\n\n' "$TICKET_NUM" "$(echo "$FULL_NAME" | awk -F/ '{print $2}')"
+      printf '**Source:** [%s](https://github.com/%s) ⭐%s · %s\n' \
+        "$FULL_NAME" "$FULL_NAME" "$STARS" "$LANGUAGE"
+      printf '**Date:** %s | **Score:** %s/10\n\n' "$TODAY" "$SCORE"
+      printf '## Why ADOPT\n\n%s\n\n' "$REASON"
+      printf '## Analysis\n\n'
+      if [ -f "$ANALYSIS_FILE" ]; then
+        cat "$ANALYSIS_FILE"
+      else
+        printf '_(analysis unavailable)_\n'
+      fi
+      printf '\n## Acceptance Criteria\n\n'
+      printf -- '- [ ] Implementation matches "How to integrate" section above\n'
+      printf -- '- [ ] Graceful fallback if the dependency is unavailable\n'
+      printf -- '- [ ] Existing tests still pass\n'
+      printf '\n## References\n\n'
+      printf -- '- OSS Report: `%s`\n' "$(basename "$REPORT_FILE")"
+      printf -- '- Source: https://github.com/%s\n' "$FULL_NAME"
+    } > "$TICKET_FILE"
+
+    log "  ticket: $TICKET_FILE"
+    NEXT_NUM=$(( NEXT_NUM + 1 ))
+  done
+
+TICKETS_CREATED=$(jq '[.[] | select(.verdict == "ADOPT")] | length' "$TOP_FILE")
+log "Phase 4.5 done — $TICKETS_CREATED ticket(s) written to tickets/"
+
 # ─── Phase 5: Self-learning ───────────────────────────────────────────────────
 
 if [ -x "$CAPTURE_OUTCOME" ]; then
