@@ -1,11 +1,10 @@
-import { spawnSync, exec } from 'node:child_process';
+import { spawnSync, execSync } from 'node:child_process';
+import { createConnection } from 'node:net';
 
 let _available: boolean | undefined = undefined;
-let _loggedUnavailable = false;
 
-const COMPRESS_TIMEOUT_MS = 5_000;
-const STATS_TIMEOUT_MS = 3_000;
 const CHECK_TIMEOUT_MS = 2_000;
+const PROXY_PORT = 8787;
 
 export function isHeadroomAvailable(): boolean {
   if (_available !== undefined) return _available;
@@ -14,62 +13,35 @@ export function isHeadroomAvailable(): boolean {
   return _available;
 }
 
-export async function compressWithHeadroom(content: string): Promise<string> {
-  if (!isHeadroomAvailable()) {
-    if (!_loggedUnavailable) {
-      _loggedUnavailable = true;
-      process.stderr.write('[HeadroomBridge] headroom not found — using fallback\n');
-    }
-    return content;
+export function getHeadroomVersion(): string | null {
+  if (!isHeadroomAvailable()) return null;
+  try {
+    const out = execSync('headroom --version', { encoding: 'utf8', timeout: CHECK_TIMEOUT_MS });
+    const match = /version\s+([\d.]+)/i.exec(out);
+    return match ? (match[1] ?? out.trim()) : out.trim();
+  } catch {
+    return null;
   }
+}
 
-  return new Promise<string>((resolve) => {
-    const child = exec(
-      'headroom compress --stdin',
-      { timeout: COMPRESS_TIMEOUT_MS },
-      (err: Error | null, stdout: string) => {
-        if (err !== null || stdout.trim().length === 0) {
-          resolve(content);
-          return;
-        }
-        resolve(stdout.trim());
-      },
-    );
-
-    if (child.stdin === null) {
-      child.kill();
-      resolve(content);
-      return;
-    }
-
-    child.stdin.write(content);
-    child.stdin.end();
+export function isProxyRunning(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = createConnection({ port: PROXY_PORT, host: '127.0.0.1' });
+    socket.setTimeout(500);
+    socket.on('connect', () => { socket.destroy(); resolve(true); });
+    socket.on('error', () => resolve(false));
+    socket.on('timeout', () => { socket.destroy(); resolve(false); });
   });
 }
 
-export async function getHeadroomStats(): Promise<Record<string, unknown> | null> {
+export async function getHeadroomStats(): Promise<{
+  version: string | null;
+  proxyRunning: boolean;
+} | null> {
   if (!isHeadroomAvailable()) return null;
-
-  return new Promise<Record<string, unknown> | null>((resolve) => {
-    exec(
-      'headroom stats --json',
-      { timeout: STATS_TIMEOUT_MS },
-      (err: Error | null, stdout: string) => {
-        if (err !== null) {
-          resolve(null);
-          return;
-        }
-        try {
-          const parsed: unknown = JSON.parse(stdout);
-          if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-            resolve(null);
-            return;
-          }
-          resolve(parsed as Record<string, unknown>);
-        } catch {
-          resolve(null);
-        }
-      },
-    );
-  });
+  const [version, proxyRunning] = await Promise.all([
+    Promise.resolve(getHeadroomVersion()),
+    isProxyRunning(),
+  ]);
+  return { version, proxyRunning };
 }

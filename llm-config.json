@@ -8,7 +8,9 @@
     "quick-coder": "qwen3:8b",
     "commit": "qwen2.5-coder:7b",
     "triage": "qwen3:8b",
-    "embedding": "mxbai-embed-large"
+    "embedding": "mxbai-embed-large",
+    "researcher": "qwen3:8b",
+    "researcher-deep": "qwen3:32b-q4_K_M"
   },
   "max_tokens": {
     "coder": 16384,
@@ -19,6 +21,8 @@
     "pre-reviewer": 4096,
     "commit": 2048,
     "triage": 2048,
+    "researcher": 2048,
+    "researcher-deep": 8192,
     "default": 4096
   },
   "free_api_url": "http://localhost:3001/v1/chat/completions",
@@ -32,7 +36,9 @@
     "doc-writer": "auto",
     "quick-coder": "qwen3-coder-next",
     "commit": "auto",
-    "triage": "auto"
+    "triage": "auto",
+    "researcher": "auto",
+    "researcher-deep": "qwen/qwen3-32b"
   },
   "cerebras_api": {
     "planner": "gpt-oss-120b",
@@ -44,7 +50,9 @@
     "doc-writer": "gpt-oss-120b",
     "quick-coder": "gpt-oss-120b",
     "commit": "gpt-oss-120b",
-    "triage": "gpt-oss-120b"
+    "triage": "gpt-oss-120b",
+    "researcher": "gpt-oss-120b",
+    "researcher-deep": "gpt-oss-120b"
   },
   "fallback": {
     "coder": "claude-sonnet-4-6",
@@ -56,7 +64,9 @@
     "quick-coder": "claude-haiku-4-5-20251001",
     "commit": "claude-haiku-4-5-20251001",
     "triage": "claude-haiku-4-5-20251001",
-    "embedding": ""
+    "embedding": "",
+    "researcher": "claude-haiku-4-5-20251001",
+    "researcher-deep": "claude-sonnet-4-6"
   },
-  "cloud_first_roles": ["planner", "reviewer", "debugger"]
+  "cloud_first_roles": ["planner", "reviewer", "debugger", "researcher-deep"]
 }

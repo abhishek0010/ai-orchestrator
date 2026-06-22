@@ -62,23 +62,23 @@ summarize(runs);
 console.log();
 
 void (async () => {
+  console.log('--- Headroom ---');
   if (!isHeadroomAvailable()) {
-    console.log('--- Headroom ---');
-    console.log('  headroom: not installed (run: pip install git+https://github.com/headroomlabs-ai/headroom.git)');
+    console.log('  status:  not installed');
+    console.log('  install: uv tool install "headroom-ai @ git+https://github.com/headroomlabs-ai/headroom.git"');
     console.log();
     return;
   }
 
-  const headroom = await getHeadroomStats();
-  if (headroom === null) return;
+  const hr = await getHeadroomStats();
+  if (hr === null) return;
 
-  const compressed = typeof headroom['compressed'] === 'number' ? headroom['compressed'] : 0;
-  const avgRatio = typeof headroom['avg_ratio'] === 'number' ? headroom['avg_ratio'] : 0;
-  const savedUsd = typeof headroom['saved_usd'] === 'number' ? headroom['saved_usd'] : 0;
-
-  console.log('--- Headroom ---');
-  console.log(`  compressed:  ${String(compressed)} sessions`);
-  console.log(`  avg ratio:   ${(avgRatio * 100).toFixed(1)}%`);
-  console.log(`  saved:       ~$${savedUsd.toFixed(2)}`);
+  console.log(`  version: ${hr.version ?? 'unknown'}`);
+  console.log(`  proxy:   ${hr.proxyRunning ? 'running on :8787' : 'not running  (start: headroom proxy)'}`);
+  if (!hr.proxyRunning) {
+    console.log('  tip:     ANTHROPIC_BASE_URL=http://127.0.0.1:8787 claude');
+  }
+  console.log(`  mcp:     headroom_compress, headroom_retrieve, headroom_stats`);
+  console.log(`  learn:   headroom learn --apply`);
   console.log();
 })();
