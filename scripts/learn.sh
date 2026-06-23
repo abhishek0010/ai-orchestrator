@@ -42,7 +42,7 @@ compute_since_epoch() {
         return
     fi
     if date -v-1d +%s >/dev/null 2>&1; then
-        date -v-${SINCE_DAYS}d +%s
+        date -v-"${SINCE_DAYS}"d +%s
     else
         date -d "-${SINCE_DAYS} days" +%s
     fi

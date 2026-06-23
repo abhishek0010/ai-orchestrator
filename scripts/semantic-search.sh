@@ -20,7 +20,8 @@ die() {
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 EMBEDDINGS_FILE="${EMBEDDINGS_FILE:-embeddings.jsonl}"
 TOP_K=10                     # default number of results
-MIN_SIMILARITY=0.5          # default similarity threshold
+# shellcheck disable=SC2034
+MIN_SIMILARITY=0.5          # default similarity threshold; reserved for vector similarity filtering
 REQUIRE_OLLAMA=0            # 0 = graceful fallback, 1 = strict mode
 
 # ----------------------------------------
@@ -37,6 +38,7 @@ while (( "$#" )); do
             shift 2
             ;;
         --min-similarity)
+            # shellcheck disable=SC2034
             MIN_SIMILARITY="${2:-0.5}"
             shift 2
             ;;
