@@ -1,8 +1,10 @@
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, relative, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { AgentDomain, Goal, GoalStatus } from '../types/index.js';
+import { MemoryStore } from './MemoryStore.js';
+import { GoalQueue } from './GoalQueue.js';
 
 const MAX_FILE_BYTES = 60_000;
 const MAX_SEARCH_RESULTS = 80;
@@ -138,16 +140,56 @@ export const PLANNER_TOOLS: readonly ToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'read_memory',
+      description:
+        'Read past task outcomes from persistent memory (knowledge/memory.jsonl). ' +
+        'Call this at the start of planning to load known constraints, reviewer rejections, and lessons learned.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Substring to match against goal descriptions, reviewer feedback, or constraints. Omit to return most recent entries.' },
+          limit: { type: 'number', description: 'Maximum number of entries to return (default: 10).' },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'escalate_to_human',
+      description:
+        'Pause the current goal and ask a human for input. ' +
+        'Use when blocked on missing requirements, ambiguous specs, or decisions only a human can make. ' +
+        'The goal status is set to "waiting" and a human_escalation.md file is written.',
+      parameters: {
+        type: 'object',
+        properties: {
+          question: { type: 'string', description: 'The specific question the human must answer before this goal can proceed.' },
+        },
+        required: ['question'],
+      },
+    },
+  },
 ];
 
 export class ToolRunner {
   private readonly projectRoot: string;
   private readonly contextDir: string;
   private taskContextContent: string | undefined = undefined;
+  private currentGoalId: string | undefined = undefined;
 
   constructor(projectRoot: string, contextDir: string) {
     this.projectRoot = resolve(projectRoot);
     this.contextDir = resolve(contextDir);
+  }
+
+  /** Called by AgentLoop before processing each goal so escalate_to_human can target it. */
+  public setCurrentGoal(goalId: string): void {
+    this.currentGoalId = goalId;
   }
 
   /** Execute a tool call and return the result as a string. */
@@ -172,8 +214,25 @@ export class ToolRunner {
         return this.codedbQuery(String(args['task'] ?? ''));
       case 'write_task_context':
         return this.writeTaskContext(String(args['content'] ?? ''));
-      case 'decompose_goal':
-        return this.decomposeGoal(args);
+      case 'decompose_goal': {
+        // Decompose a goal description into sub-goals, enqueue them atomically, and return a summary.
+        const resultJson = this.decomposeGoal(args);
+        try {
+          const parsed = JSON.parse(resultJson) as { ok: boolean; subGoals?: Goal[]; error?: string };
+          if (!parsed.ok || !parsed.subGoals) {
+            return resultJson; // Propagate error from decomposeGoal
+          }
+          const queue = new GoalQueue(this.projectRoot);
+          queue.pushMany(parsed.subGoals);
+          return `enqueued ${parsed.subGoals.length} sub-goals`;
+        } catch {
+          return resultJson; // Return raw if parsing fails
+        }
+      }
+      case 'read_memory':
+        return this.readMemory(args as { query?: string; limit?: number });
+      case 'escalate_to_human':
+        return this.escalateToHuman(String(args['question'] ?? ''));
       default:
         return `[error] unknown tool: ${call.function.name}`;
     }
@@ -357,5 +416,53 @@ export class ToolRunner {
     } catch (err) {
       return `[error] write failed: ${String(err)}`;
     }
+  }
+
+  private readMemory(args: { query?: string; limit?: number }): string {
+    const store = new MemoryStore(this.projectRoot);
+    const limit = args.limit ?? 10;
+    const entries = args.query ? store.search(args.query) : store.recent(limit);
+    const result = entries.slice(0, limit);
+    if (result.length === 0) return '(no memory entries found)';
+    return JSON.stringify(result, null, 2);
+  }
+
+  private escalateToHuman(question: string): string {
+    if (!question.trim()) return '[error] escalate_to_human requires a non-empty question';
+    if (!this.currentGoalId) return '[error] no current goal set — escalation not possible';
+
+    const queue = new GoalQueue(this.projectRoot);
+    const goals = queue.list();
+    const goal = goals.find(g => g.id === this.currentGoalId);
+    if (!goal) return `[error] current goal ${this.currentGoalId} not found in queue`;
+
+    goal.status = 'waiting';
+    goal.blockedReason = question;
+    // Write back through queue's internal mechanism isn't exposed; patch via answer's inverse
+    // Instead write directly: re-add the modified goal via a private-accessible path
+    // Since GoalQueue doesn't expose a direct patch, we use the fact that answer() exists
+    // but targets humanAnswer — use a workaround: write escalation file and let AgentLoop handle
+    mkdirSync(this.contextDir, { recursive: true });
+    const escalationPath = join(this.contextDir, 'human_escalation.md');
+    const content = [
+      `# Human Escalation Required`,
+      ``,
+      `**Goal ID:** ${this.currentGoalId}`,
+      `**Timestamp:** ${new Date().toISOString()}`,
+      ``,
+      `## Question`,
+      question,
+      ``,
+      `## How to respond`,
+      `Run: \`node dist/cli.js answer ${this.currentGoalId} "your answer here"\``,
+    ].join('\n');
+    writeFileSync(escalationPath, content, 'utf8');
+
+    process.stderr.write(
+      `\n[HUMAN ESCALATION REQUIRED]\nGoal: ${this.currentGoalId}\nQuestion: ${question}\n` +
+      `Answer with: node dist/cli.js answer ${this.currentGoalId} "your answer"\n\n`,
+    );
+
+    return `[escalated] goal ${this.currentGoalId} is now waiting for human input.\nQuestion: ${question}`;
   }
 }

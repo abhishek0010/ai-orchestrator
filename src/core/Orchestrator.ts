@@ -477,6 +477,44 @@ export class Orchestrator {
 
     if (sections.length === 0) return undefined;
 
+    // Inject project file tree so the coder LLM knows exactly where files live in the
+    // target project — critical when the orchestrator is used from a different repo.
+    const treeResult = spawnSync(
+      'find',
+      [
+        this.projectRoot,
+        '-type', 'f',
+        '-not', '-path', '*/node_modules/*',
+        '-not', '-path', '*/.git/*',
+        '-not', '-path', '*/dist/*',
+        '-not', '-path', '*/.claude/context/*',
+      ],
+      { encoding: 'utf8', timeout: 5_000 },
+    );
+    const treeLines = (treeResult.stdout ?? '')
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map(p => p.replace(this.projectRoot + '/', ''))
+      .sort()
+      .slice(0, 200); // cap at 200 paths to avoid blowing the context
+
+    const structureSection = treeLines.length > 0
+      ? [
+          '',
+          '---',
+          '',
+          '## TARGET PROJECT STRUCTURE',
+          '',
+          'These are ALL source files in the target project. Use these paths EXACTLY in %%FILE blocks.',
+          'NEVER emit a bare filename without its directory (e.g. WRONG: `AgentLoop.ts`, RIGHT: `src/core/AgentLoop.ts`).',
+          '',
+          '```',
+          treeLines.join('\n'),
+          '```',
+        ].join('\n')
+      : '';
+
     const header = [
       '',
       '---',
@@ -489,7 +527,7 @@ export class Orchestrator {
       '',
     ].join('\n');
 
-    return context + header + sections.join('\n\n');
+    return context + structureSection + header + sections.join('\n\n');
   }
 
   /** Extracts file paths listed under the "## Files to Change" section of a task context. */

@@ -14,11 +14,17 @@ Analyze a coding task, explore the codebase, and write a **context file** to dis
 
 ### Phase 0 — Load Project Overview (fast path)
 
+**Persistent memory (first action):** Before anything else, call `read_memory` with the task description as the query to surface relevant past constraints, reviewer rejections, and lessons learned:
+
+```python
+read_memory(query="<task keywords>", limit=10)
+
+Incorporate any returned constraints into `## Key standards for This Task` in the context file. If the result is empty, proceed normally.
+
 **Knowledge index (cross-project context):** Before reading project_overview.md, check if a knowledge index exists:
 
 ```bash
 ls knowledge/context-index.md 2>/dev/null
-```
 
 If it exists, read it immediately. It contains: related repos, cross-repo dependencies, architectural decisions, and known constraints. Use it to avoid wrong assumptions about shared code or external systems. Do not re-read it in later phases.
 
@@ -26,7 +32,6 @@ If it exists, read it immediately. It contains: related repos, cross-repo depend
 
 ```bash
 ls skills/discovered/*.md 2>/dev/null
-```
 
 If any exist, scan their filenames for topic overlap with the current task (e.g. a file named `typescript-20260615.md` is relevant to TypeScript tasks). Read any that match — they contain rules auto-generated from past reviewer feedback. Treat them as addenda to the main language standards: include their rules in `## Key standarts for This Task` in the context file.
 
@@ -34,7 +39,6 @@ Before any exploration, check if `.claude/context/project_overview.md` exists an
 
 ```bash
 ls .claude/context/project_overview.md .claude/context/analysis_delta.md 2>/dev/null
-```
 
 **If `project_overview.md` EXISTS** — read it immediately. This is your authoritative map of the project architecture and constraints.
 
@@ -43,7 +47,6 @@ After reading, **check for stale entries**:
 ```bash
 git status --short
 git diff --name-only HEAD~1 HEAD 2>/dev/null
-```
 
 For every file listed in `## Key Files` of the overview: if the file appears in either command's output, mark it **[STALE]** in your mental model. In Phase 1, re-read those files fully instead of trusting the cached description.
 
@@ -55,7 +58,6 @@ For every file listed in `## Key Files` of the overview: if the file appears in 
 
 ```bash
 ls .claude/context/architect_decision.md 2>/dev/null
-```
 
 **If it exists** — read it in full. Then:
 
@@ -144,7 +146,6 @@ After writing `task_context.md`, update `.claude/context/project_overview.md`. Y
 
 Write the overview using this exact format:
 
-```markdown
 # Project Overview
 
 _Last updated: <YYYY-MM-DD> by planner after task: <one-sentence task description>_
@@ -168,7 +169,6 @@ _Last updated: <YYYY-MM-DD> by planner after task: <one-sentence task descriptio
 ## Known Constraints
 - <constraint, e.g. "never mock Ollama in tests — flag as requires-Ollama">
 - <constraint, e.g. "README.md is managed by doc-writer agent only">
-```
 
 1. **Return** the path `.claude/context/task_context.md`
 
@@ -176,7 +176,6 @@ _Last updated: <YYYY-MM-DD> by planner after task: <one-sentence task descriptio
 
 Write exactly this structure to `.claude/context/task_context.md`:
 
-```markdown
 # Task Context
 
 ## Language
@@ -208,7 +207,6 @@ For every function/method to add or modify, write the exact signature the coder 
 def function_name(self, param: Type, other: Type = default) -> ReturnType:
     """Docstring if this codebase uses them."""
     ...
-```
 
 ## Types Needed
 
@@ -222,7 +220,6 @@ error handling pattern, or structure the coder must replicate:
 ```python
 # From <file_path>:<line_range> — shows <what pattern>
 <actual code copied verbatim>
-```
 
 ## Anti-patterns — Do NOT do this
 
@@ -250,22 +247,17 @@ List 2-5 things that would be wrong in this codebase, based on what you observed
 
 ```python
 <full file contents>
-```
 
 ### <another_file_path>
 
 ```python
 <full file contents>
-```
-
-```markdown
 
 ## Context Size Management
 
 After writing the draft, estimate its size:
 ```bash
 wc -c .claude/context/task_context.md
-```
 
 **If the file is under ~90 000 characters** — done, proceed to self-critique.
 
@@ -301,3 +293,18 @@ wc -c .claude/context/task_context.md
 ## Required Skills
 
 - skills/humanizer.md
+
+
+---
+
+Based on the context above, follow these instructions:
+You are a markdown expert. Fix the reported markdownlint errors in the file provided in context.
+
+Common fixes required:
+- MD040: Fenced code blocks must have a language specifier. Add an appropriate language (e.g. bash, json, text, typescript, python, yaml, sh) after the opening fence. Use 'text' for plain output/examples with no programming language.
+
+CRITICAL RULES:
+- Return the FULL corrected file content with ALL fixes applied.
+- Preserve ALL existing content, structure, code blocks, and formatting exactly.
+- Do NOT add, remove, or reword any content beyond what is required to fix the lint errors.
+- Return ONLY the raw file content. No explanations, no surrounding markdown fences, no preamble.

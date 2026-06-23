@@ -95,7 +95,7 @@ export type ClusterConfig = {
   readonly nodes: readonly ClusterNode[];
 };
 
-export type GoalStatus = 'pending' | 'running' | 'done' | 'failed';
+export type GoalStatus = 'pending' | 'running' | 'done' | 'failed' | 'waiting';
 
 export type Goal = {
   readonly id: string;
@@ -103,6 +103,8 @@ export type Goal = {
   readonly domains?: readonly AgentDomain[];
   readonly projectRoot: string;
   status: GoalStatus;
+  blockedReason?: string;
+  humanAnswer?: string;
   readonly createdAt: string;
   startedAt?: string;
   completedAt?: string;
@@ -110,6 +112,8 @@ export type Goal = {
   error?: string;
   readonly parentId?: string;
   readonly dependsOn?: readonly string[];
+  readonly priority?: number;
+  readonly deadline?: string;
   retryCount?: number;
   taskContext?: string;
   testCommand?: string;

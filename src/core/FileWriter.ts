@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, normalize, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 export type ParsedFile = {
   readonly relativePath: string;
@@ -52,6 +53,24 @@ export function writeFilesToProject(files: ParsedFile[], projectRoot: string): s
 
     if (!absolutePath.startsWith(resolvedRoot + '/') && absolutePath !== resolvedRoot) {
       throw new Error(`FileWriter: path escapes project root: "${file.relativePath}"`);
+    }
+
+    // Bare-filename guard: reject paths with no directory component (e.g. "AgentLoop.ts")
+    // when a file with the same name already exists deeper in the tree. Prevents the LLM
+    // from polluting the project root when it forgets to include the full path.
+    if (!file.relativePath.includes('/')) {
+      const basename = file.relativePath;
+      const found = spawnSync(
+        'find',
+        [resolvedRoot, '-name', basename, '-not', '-path', absolutePath, '-not', '-path', '*/node_modules/*'],
+        { encoding: 'utf8' },
+      );
+      if ((found.stdout ?? '').trim().length > 0) {
+        throw new Error(
+          `[path-guard] "${basename}" has no directory prefix but already exists at:\n${found.stdout.trim()}\n` +
+          `The model must use the full relative path (e.g. src/core/${basename}).`,
+        );
+      }
     }
 
     // Stub guard: if the existing file is substantially larger than the new output,
@@ -138,7 +157,8 @@ each file you must modify. You MUST follow this workflow for every file:
 Rules:
 - NEVER remove, rename, or shorten any existing code — only ADD
 - If a function or type already exists, keep it exactly as-is and add the new ones beside it
-- Paths must be relative to the project root (e.g. src/foo.ts, not /absolute/path)
+- Paths MUST be relative to the project root WITH full directory prefix: src/core/Foo.ts, src/types/index.ts
+- NEVER output a bare filename without directory (e.g. WRONG: "AgentLoop.ts", RIGHT: "src/core/AgentLoop.ts")
 - Output the COMPLETE file content including all existing + all new code
 - One %%FILE...%%ENDFILE block per file
 - Do NOT wrap content in markdown code fences inside the blocks

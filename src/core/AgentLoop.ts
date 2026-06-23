@@ -11,6 +11,7 @@ import { ToolRunner } from './ToolRunner.js';
 import { KNOWN_DOMAINS } from '../types/index.js';
 import type { AgentDomain, Goal } from '../types/index.js';
 import * as PolicyEngine from './PolicyEngine.js';
+import { MemoryStore } from './MemoryStore.js';
 
 const DEFAULT_POLL_MS = 10_000;
 const DEFAULT_CONFIG = 'llm-config.json';
@@ -28,6 +29,7 @@ export class AgentLoop {
   private readonly agentsDir: string;
   private readonly pollMs: number;
   private readonly toolRunner: ToolRunner;
+  private readonly memoryStore: MemoryStore;
   private active = false;
 
   constructor(projectRoot: string, pollMs = DEFAULT_POLL_MS) {
@@ -38,6 +40,7 @@ export class AgentLoop {
     this.queue = new GoalQueue(this.projectRoot);
     this.runner = new AgentRunner();
     this.toolRunner = new ToolRunner(this.projectRoot, this.contextDir);
+    this.memoryStore = new MemoryStore(this.projectRoot);
     mkdirSync(this.contextDir, { recursive: true });
   }
 
@@ -61,14 +64,23 @@ export class AgentLoop {
   private async loop(): Promise<void> {
     while (this.active) {
       const goal = this.queue.nextReady();
-      if (goal !== null) {
-        const claimed = this.queue.claim(goal.id);
-        if (claimed !== undefined) {
-          await this.processGoal(claimed);
-        }
-      } else {
+      if (goal === undefined) {
         process.stderr.write('[agent-loop] no ready goals — waiting\n');
         await sleep(this.pollMs);
+        continue;
+      }
+      if (goal.status === 'waiting') {
+        process.stderr.write(`[agent-loop] goal ${goal.id.slice(0, 8)} is waiting for human input — skipping\n`);
+        await sleep(this.pollMs);
+        continue;
+      }
+      if (goal.deadline && new Date(goal.deadline) < new Date()) {
+        process.stderr.write(`[agent-loop] WARN: goal ${goal.id.slice(0, 8)} past deadline (${goal.deadline})\n`);
+      }
+      const claimed = this.queue.claim(goal.id);
+      if (claimed !== undefined) {
+        this.toolRunner.setCurrentGoal(claimed.id);
+        await this.processGoal(claimed);
       }
     }
     process.stderr.write('[agent-loop] stopped\n');
@@ -119,10 +131,23 @@ export class AgentLoop {
 
       if (reviewOutcome.passed) {
         this.queue.complete(goal.id, summary);
+        this.memoryStore.append({
+          goalId: goal.id,
+          goalDescription: goal.description,
+          outcome: 'success',
+          reviewerFeedback: summary,
+        });
         process.stderr.write(`[agent-loop] goal ${goal.id.slice(0, 8)} — done\n`);
       } else {
         const failed = reviewOutcome.failedDomains.join(', ');
-        this.queue.fail(goal.id, `review failed for: ${failed}\n${summary}`);
+        const failSummary = `review failed for: ${failed}\n${summary}`;
+        this.queue.fail(goal.id, failSummary);
+        this.memoryStore.append({
+          goalId: goal.id,
+          goalDescription: goal.description,
+          outcome: 'failure',
+          reviewerFeedback: failSummary,
+        });
         process.stderr.write(`[agent-loop] goal ${goal.id.slice(0, 8)} — review failed\n`);
       }
     } catch (err) {

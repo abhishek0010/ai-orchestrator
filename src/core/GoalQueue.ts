@@ -69,23 +69,64 @@ export class GoalQueue {
     return count;
   }
 
-  /** Atomically enqueue pre-built Goal objects (used by decompose_goal tool). */
-  pushMany(newGoals: readonly Goal[]): void {
-    if (newGoals.length === 0) return;
+  /**
+   * Atomically enqueue pre-built Goal objects (used by decompose_goal tool).
+   * Maintains backward compatibility by returning void.
+   */
+  public pushMany(newGoals: readonly Goal[]): void {
+    if (newGoals.length === 0) {
+      return;
+    }
     const existing = this.readAll();
-    this.writeAll([...existing, ...newGoals]);
+    try {
+      this.writeAll([...existing, ...newGoals]);
+    } catch (e) {
+      // Preserve original error semantics.
+      throw e;
+    }
   }
 
-  nextReady(): Goal | null {
+  public nextReady(): Goal | undefined {
     const goals = this.readAll();
-    for (const goal of goals) {
-      if (goal.status !== 'pending') continue;
-      if (goal.dependsOn && goal.dependsOn.some(dep => !this.isCompleted(dep, goals))) {
-        continue;
-      }
-      return goal;
-    }
-    return null;
+    const ready = goals.filter(goal => {
+      if (goal.status !== 'pending') return false;
+      if (goal.dependsOn && goal.dependsOn.some(dep => !this.isCompleted(dep, goals))) return false;
+      return true;
+    });
+    if (ready.length === 0) return undefined;
+    ready.sort((a, b) => {
+      const pa = a.priority ?? 50;
+      const pb = b.priority ?? 50;
+      if (pb !== pa) return pb - pa;
+      return a.createdAt < b.createdAt ? -1 : 1;
+    });
+    return ready[0];
+  }
+
+  /**
+   * Add a goal to the queue, ensuring a default priority of 50 if none is provided.
+   * Does not mutate the caller's object; creates a shallow copy instead.
+   */
+  public add(goal: Goal): void {
+    const storedGoal = { ...goal, priority: goal.priority ?? 50 };
+    const goals = this.readAll();
+    goals.push(storedGoal);
+    this.writeAll(goals);
+  }
+
+  /**
+   * Record a human-provided answer for a goal and reset its status to pending.
+   * Does not affect goals that are already completed.
+   */
+  public answer(id: string, answer: string): void {
+    const goals = this.readAll();
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    // Do not modify already completed goals.
+    if (goal.status === 'done' || goal.status === 'failed') return;
+    goal.humanAnswer = answer;
+    goal.status = 'pending';
+    this.writeAll(goals);
   }
 
   private patch(id: string, patch: Partial<Goal>): void {
