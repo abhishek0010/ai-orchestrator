@@ -145,7 +145,7 @@ export class AgentLoop {
   ): Promise<void> {
     const { allowed, reason } = await PolicyEngine.check(toolName, toolArgs);
     if (!allowed) {
-      logger.warn(`Policy blocked ${toolName}: ${reason}`, toolArgs);
+      process.stderr.write(`[policy] blocked ${toolName}: ${reason} — args: ${JSON.stringify(toolArgs)}\n`);
       return;
     }
     // TODO: place actual tool execution logic here, e.g.,

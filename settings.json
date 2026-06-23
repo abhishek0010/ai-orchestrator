@@ -1,4 +1,5 @@
 {
+  "policyFiles": [".claude/policies/default.json"],
   "hooks": {
     "PostToolUse": [
       {

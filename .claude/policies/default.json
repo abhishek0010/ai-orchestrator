@@ -1,0 +1,5 @@
+[
+  { "action": "Bash", "block_if": "rm\\s+-rf\\s+/", "reason": "destructive rm -rf / is not allowed" },
+  { "action": "Write", "block_if": "^/etc/", "reason": "writing to /etc is not allowed" },
+  { "action": "Bash", "block_if": "curl.*\\|.*sh", "reason": "piping curl to shell is not allowed" }
+]
