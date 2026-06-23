@@ -1,13 +1,66 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { resolve, relative, join } from 'node:path';
+import { resolve, relative, join, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { homedir } from 'node:os';
+import { globSync } from 'node:fs';
 import type { AgentDomain, Goal, GoalStatus } from '../types/index.js';
 import { MemoryStore } from './MemoryStore.js';
 import { GoalQueue } from './GoalQueue.js';
 
 const MAX_FILE_BYTES = 60_000;
 const MAX_SEARCH_RESULTS = 80;
+
+/**
+ * Resolve the codebase-memory-mcp binary path once per process.
+ * Order of preference:
+ *   1. ~/.claude/.mcp.json registered command (most reliable on this machine)
+ *   2. npm global root + package bin
+ *   3. glob over ~/.npm/_npx cache (covers npx-installed versions)
+ *   4. npx --no-install (fast-fail if not cached — no download)
+ *   5. undefined → caller falls back to unavailable message
+ */
+function resolveMcpBinary(): string | undefined {
+  // 1. ~/.claude/.mcp.json
+  try {
+    const mcpJson = join(homedir(), '.claude', '.mcp.json');
+    if (existsSync(mcpJson)) {
+      const config = JSON.parse(readFileSync(mcpJson, 'utf8')) as {
+        mcpServers?: Record<string, { command?: string }>;
+      };
+      const cmd = config.mcpServers?.['codebase-memory-mcp']?.command;
+      if (cmd && existsSync(cmd)) return cmd;
+    }
+  } catch { /* ignore */ }
+
+  // 2. npm global root
+  try {
+    const npmRoot = spawnSync('npm', ['root', '-g'], { encoding: 'utf8', timeout: 3_000 });
+    if (!npmRoot.error && npmRoot.status === 0) {
+      const candidate = join(
+        npmRoot.stdout.trim(),
+        '@deus-data', 'codebase-memory-mcp', 'bin', 'codebase-memory-mcp',
+      );
+      if (existsSync(candidate)) return candidate;
+    }
+  } catch { /* ignore */ }
+
+  // 3. npx cache glob — works when installed via "npx --yes"
+  try {
+    const npxBase = join(homedir(), '.npm', '_npx');
+    if (existsSync(npxBase)) {
+      const matches = globSync(
+        `${npxBase}/*/node_modules/codebase-memory-mcp/bin/codebase-memory-mcp`,
+      );
+      if (matches.length > 0) return matches[matches.length - 1]; // latest
+    }
+  } catch { /* ignore */ }
+
+  // 4. npx --no-install (fast-fail if absent, no network)
+  return undefined;
+}
+
+const MCP_BINARY = resolveMcpBinary();
 
 export type ToolDefinition = {
   readonly type: 'function';
@@ -359,6 +412,10 @@ export class ToolRunner {
       return '[error] graph_query requires query and project';
     }
 
+    if (MCP_BINARY === undefined) {
+      return '[graph_query unavailable — codebase-memory-mcp binary not found. Install with: npm i -g @deus-data/codebase-memory-mcp]';
+    }
+
     const payload = JSON.stringify({
       jsonrpc: '2.0',
       id: 1,
@@ -369,29 +426,31 @@ export class ToolRunner {
       },
     });
 
-    const result = spawnSync(
-      'npx',
-      ['--yes', '@deus-data/codebase-memory-mcp'],
-      {
-        input: payload + '\n',
-        encoding: 'utf8',
-        timeout: 5_000,
-        cwd: this.projectRoot,
-      },
-    );
+    const result = spawnSync(MCP_BINARY, [], {
+      input: payload + '\n',
+      encoding: 'utf8',
+      timeout: 10_000,
+      cwd: this.projectRoot,
+    });
 
     if (result.error || result.status !== 0) {
-      return '[graph_query unavailable — codebase-memory-mcp not found or timed out]';
+      return '[graph_query unavailable — codebase-memory-mcp failed or timed out]';
     }
 
-    try {
-      const parsed = JSON.parse(result.stdout) as {
-        result?: { content?: Array<{ text?: string }> };
-      };
-      return parsed.result?.content?.[0]?.text ?? '[no results]';
-    } catch {
-      return '[graph_query] could not parse MCP response';
+    // MCP server may emit multiple JSON-RPC messages on stdout; find our response by id=1
+    const lines = (result.stdout ?? '').split('\n').filter(Boolean);
+    for (const line of lines) {
+      try {
+        const msg = JSON.parse(line) as {
+          id?: number;
+          result?: { content?: Array<{ text?: string }> };
+        };
+        if (msg.id === 1) {
+          return msg.result?.content?.[0]?.text ?? '[no results]';
+        }
+      } catch { /* skip non-JSON lines */ }
     }
+    return '[graph_query] could not parse MCP response';
   }
 
   private codedbQuery(task: string): string {
