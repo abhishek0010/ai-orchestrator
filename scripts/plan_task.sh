@@ -156,6 +156,7 @@ IS_BASH=$(echo "$TASK_LOWER" | grep -cE '\.sh|bash script|shell script' || true)
 {
     echo "=== FILES EXPLICITLY MENTIONED IN TASK (full content) ==="
     # Ищем пути вида src/foo/bar.ts, tickets/012-foo.md, agents/planner.md и т.д.
+    # shellcheck disable=SC2016
     MENTIONED=$(echo "$TASK" | grep -oE '`?(src|scripts|agents|commands|tickets|plugins|skills|knowledge)/[^` ,):]+`?' \
         | tr -d '`' | sort -u)
     for rel in $MENTIONED; do

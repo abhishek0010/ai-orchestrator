@@ -124,6 +124,20 @@ export const PLANNER_TOOLS: readonly ToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'codedb_query',
+      description: 'Query the codedb code‑intelligence engine for semantic code lookup.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task: { type: 'string', description: 'The query task to pass to codedb (e.g. "find callers of foo")' },
+        },
+        required: ['task'],
+      },
+    },
+  },
 ];
 
 export class ToolRunner {
@@ -154,6 +168,8 @@ export class ToolRunner {
         return this.searchFiles(String(args['pattern'] ?? ''), String(args['directory'] ?? 'src'));
       case 'graph_query':
         return this.graphQuery(String(args['query'] ?? ''), String(args['project'] ?? ''));
+      case 'codedb_query':
+        return this.codedbQuery(String(args['task'] ?? ''));
       case 'write_task_context':
         return this.writeTaskContext(String(args['content'] ?? ''));
       case 'decompose_goal':
@@ -317,6 +333,19 @@ export class ToolRunner {
     } catch {
       return '[graph_query] could not parse MCP response';
     }
+  }
+
+  private codedbQuery(task: string): string {
+    const result = spawnSync('codedb', ['query', task], {
+      encoding: 'utf8',
+      cwd: this.projectRoot,
+    });
+
+    if (result.error || result.status !== 0) {
+      return '[codedb_query unavailable — codedb binary not found or execution error]';
+    }
+
+    return (result.stdout ?? '').trim();
   }
 
   private writeTaskContext(content: string): string {

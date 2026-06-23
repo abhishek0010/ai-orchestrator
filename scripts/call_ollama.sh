@@ -104,7 +104,6 @@ PROMPT_CHARS=$(wc -c < "$TMP_PROMPT" | tr -d ' ')
 
 RESPONSE_CONTENT=""
 RESPONSE=""
-OLLAMA_EXIT=1
 
 # _call_cerebras_api <model>
 # Globals read:  TMP_PROMPT, TMP_CONTEXT, MAX_TOKENS, CEREBRAS_API_KEY
