@@ -102,7 +102,7 @@ PYEOF
     local outcomes_lines
     outcomes_lines=$(grep '^{' "$OUTCOMES_FILE" 2>/dev/null || true)
 
-    while IFS=' ' read -r idx score; do
+    while IFS=' ' read -r idx _score; do
         echo "$outcomes_lines" | awk -v n="$idx" 'NR == n+1 {print; exit}'
     done <<< "$matches"
 }

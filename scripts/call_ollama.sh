@@ -197,7 +197,6 @@ if [ -z "$RESPONSE_CONTENT" ]; then
     RESPONSE=$(curl -s -X POST http://localhost:11434/api/chat \
       -H "Content-Type: application/json" \
       -d @"$TMP_PAYLOAD")
-    OLLAMA_EXIT=$?
     rm -f "$TMP_PAYLOAD"
 
     RESPONSE_CONTENT=$(echo "$RESPONSE" | jq -r '.message.content // empty')

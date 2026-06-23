@@ -61,4 +61,4 @@ rules:
 ## References
 
 - OSS Report: `knowledge/github-monitoring/2026-06-22.md`
-- Source: https://github.com/omnigent-ai/omnigent
+- Source: <https://github.com/omnigent-ai/omnigent>

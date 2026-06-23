@@ -59,6 +59,7 @@ if [ -f "$WIKI_DIR/WIKI_INDEX.md" ]; then
     # Найти релевантные community файлы по ключевым словам задачи
     # Берём слова длиннее 4 символов из описания задачи
     KEYWORDS=$(echo "$TASK $DOMAIN" | tr ' ' '\n' | awk 'length>4' | tr '\n' '|' | sed 's/|$//')
+    # shellcheck disable=SC2016
     KEYWORDS=$(printf '%s' "$KEYWORDS" | sed 's/[.[\*^$()+?{|]/\\&/g')
     if [ -n "$KEYWORDS" ]; then
         RELEVANT=$(grep -il -E "$KEYWORDS" "$WIKI_DIR"/community_*.md 2>/dev/null | head -4)
@@ -155,7 +156,7 @@ IS_BASH=$(echo "$TASK_LOWER" | grep -cE '\.sh|bash script|shell script' || true)
 {
     echo "=== FILES EXPLICITLY MENTIONED IN TASK (full content) ==="
     # Ищем пути вида src/foo/bar.ts или scripts/foo.sh в тексте задачи
-    MENTIONED=$(echo "$TASK" | grep -oE '`?(src|scripts|agents|commands)/[^` \n,)]+`?' \
+    MENTIONED=$(echo "$TASK" | grep -oE '`?(src|scripts|agents|commands)/[^` ,)]+`?' \
         | tr -d '`' | sort -u)
     for rel in $MENTIONED; do
         abs="$PROJECT_ROOT/$rel"

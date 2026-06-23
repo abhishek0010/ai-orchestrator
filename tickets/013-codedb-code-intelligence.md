@@ -39,4 +39,4 @@ Add `codedb_query` to the list of available tools for structural look-ups, so th
 ## References
 
 - OSS Report: `knowledge/github-monitoring/2026-06-22.md`
-- Source: https://github.com/justrach/codedb
+- Source: <https://github.com/justrach/codedb>

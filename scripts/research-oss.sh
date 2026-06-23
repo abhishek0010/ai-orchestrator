@@ -269,6 +269,9 @@ EOF
       --prompt-file "$DEEP_TMP" 2>/dev/null \
       || echo "Analysis unavailable for $FULL_NAME")
 
+    # Strip trailing whitespace from each line to prevent MD035 violations in the report
+    ANALYSIS=$(printf '%s\n' "$ANALYSIS" | sed 's/[[:space:]]*$//')
+
     VERDICT=$(echo "$ANALYSIS" | grep -oE 'Verdict: (ADOPT|WATCH|SKIP)' \
       | head -1 | grep -oE 'ADOPT|WATCH|SKIP' || echo "WATCH")
 
@@ -408,6 +411,12 @@ BEST=$(jq -r '[.[] | select(.verdict == "ADOPT")] | sort_by(-.score) | .[0].full
   done
 } > "$REPORT_FILE"
 
+# Uniquify duplicate ### headings — model sometimes emits multiple sections per repo (fixes MD024)
+awk '/^### /{count[$0]++; if(count[$0]>1){print $0 " — " count[$0]; next}} {print}' \
+  "$REPORT_FILE" > "$REPORT_FILE.tmp" && mv "$REPORT_FILE.tmp" "$REPORT_FILE"
+# Strip any remaining trailing whitespace (fixes MD035)
+sed 's/[[:space:]]*$//' "$REPORT_FILE" > "$REPORT_FILE.tmp" && mv "$REPORT_FILE.tmp" "$REPORT_FILE"
+
 log "Report written: $REPORT_FILE"
 
 # ─── Phase 4.5: Generate tickets for ADOPT verdicts ──────────────────────────
@@ -416,8 +425,8 @@ TICKETS_DIR="$REPO_DIR/tickets"
 mkdir -p "$TICKETS_DIR"
 
 # Find next ticket number
-NEXT_NUM=$(ls "$TICKETS_DIR"/*.md 2>/dev/null \
-  | grep -oE '^.*/([0-9]+)-' | grep -oE '[0-9]+' | sort -n | tail -1 || echo "0")
+NEXT_NUM=$(for f in "$TICKETS_DIR"/*.md; do [[ -f "$f" ]] && basename "$f"; done 2>/dev/null \
+  | grep -oE '^[0-9]+' | sort -n | tail -1 || echo "0")
 NEXT_NUM=$(( NEXT_NUM + 1 ))
 
 TICKETS_CREATED=0
@@ -432,7 +441,7 @@ jq -c '[.[] | select(.verdict == "ADOPT")] | sort_by(-.score) | .[]' "$TOP_FILE"
     ANALYSIS_FILE="$ANALYSES_DIR/$(echo "$FULL_NAME" | tr '/' '_').md"
 
     TICKET_NUM=$(printf '%03d' "$NEXT_NUM")
-    TICKET_SLUG=$(echo "$REPO_SHORT" | sed 's/[^a-z0-9-]/-/g')
+    TICKET_SLUG="${REPO_SHORT//[^a-z0-9-]/-}"
     TICKET_FILE="$TICKETS_DIR/${TICKET_NUM}-${TICKET_SLUG}.md"
 
     {
@@ -452,8 +461,8 @@ jq -c '[.[] | select(.verdict == "ADOPT")] | sort_by(-.score) | .[]' "$TOP_FILE"
       printf -- '- [ ] Graceful fallback if the dependency is unavailable\n'
       printf -- '- [ ] Existing tests still pass\n'
       printf '\n## References\n\n'
-      printf -- '- OSS Report: `%s`\n' "$(basename "$REPORT_FILE")"
-      printf -- '- Source: https://github.com/%s\n' "$FULL_NAME"
+      printf -- "- OSS Report: \`%s\`\n" "$(basename "$REPORT_FILE")"
+      printf -- '- Source: <https://github.com/%s>\n' "$FULL_NAME"
     } > "$TICKET_FILE"
 
     log "  ticket: $TICKET_FILE"
