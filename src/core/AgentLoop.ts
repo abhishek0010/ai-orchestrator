@@ -10,6 +10,7 @@ import { AgentRunner } from '../agents/AgentRunner.js';
 import { ToolRunner } from './ToolRunner.js';
 import { KNOWN_DOMAINS } from '../types/index.js';
 import type { AgentDomain, Goal } from '../types/index.js';
+import * as PolicyEngine from './PolicyEngine.js';
 
 const DEFAULT_POLL_MS = 10_000;
 const DEFAULT_CONFIG = 'llm-config.json';
@@ -131,6 +132,26 @@ export class AgentLoop {
     }
   }
 
+  /**
+   * Executes a tool after checking policies.
+   * If the policy check disallows the tool, a warning is emitted and execution stops.
+   *
+   * @param toolName - Name of the tool to execute.
+   * @param toolArgs - Arguments supplied to the tool.
+   */
+  private async executeTool(
+    toolName: string,
+    toolArgs: Record<string, unknown>,
+  ): Promise<void> {
+    const { allowed, reason } = await PolicyEngine.check(toolName, toolArgs);
+    if (!allowed) {
+      logger.warn(`Policy blocked ${toolName}: ${reason}`, toolArgs);
+      return;
+    }
+    // TODO: place actual tool execution logic here, e.g.,
+    // await this.toolRunner.runTool(toolName, toolArgs);
+  }
+
   private async observeLoop(goal: Goal, retryCount: number): Promise<boolean> {
     if (retryCount >= MAX_RETRY_COUNT) {
       process.stderr.write(`[observe-loop] retry budget exhausted (tried ${MAX_RETRY_COUNT} times)\n`);
@@ -187,7 +208,7 @@ export class AgentLoop {
 
   /**
    * Runs the planner as a real agent loop with tool access.
-   * The planner reads files, greps the codebase, and calls write_task_context when done.
+   * The planner reads files, understand the task, and calls write_task_context when done.
    * This replicates the /implement flow planner step.
    */
   private async runPlanner(description: string, domains: AgentDomain[]): Promise<boolean> {
