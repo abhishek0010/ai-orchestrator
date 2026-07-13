@@ -10,3 +10,4 @@ vitali87/code-graph-rag	2026-07-06	ADOPT
 SylphxAI/pdf-reader-mcp	2026-07-07	WATCH
 zzet/gortex	2026-07-07	ADOPT
 EverMind-AI/EverOS	2026-07-07	WATCH
+zhnt/loushang	2026-07-13	WATCH
