@@ -38,6 +38,12 @@ fix_with_ollama() {
     local file="$1"
     local errors="$2"
 
+    # Fast connectivity check — skip if Ollama is not reachable
+    if ! curl -s --connect-timeout 3 --max-time 5 http://localhost:11434/api/tags > /dev/null 2>&1; then
+        echo "  ⚠ Ollama not reachable — fix $file manually."
+        return 1
+    fi
+
     echo "  Asking Ollama to fix remaining errors in $file..."
 
     local file_content

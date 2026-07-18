@@ -193,7 +193,7 @@ if [ -z "$RESPONSE_CONTENT" ]; then
         stream: false
       }' > "$TMP_PAYLOAD"
 
-    RESPONSE=$(curl -s -X POST http://localhost:11434/api/chat \
+    RESPONSE=$(curl -s --connect-timeout 5 --max-time 120 -X POST http://localhost:11434/api/chat \
       -H "Content-Type: application/json" \
       -d @"$TMP_PAYLOAD")
     rm -f "$TMP_PAYLOAD"
@@ -310,7 +310,7 @@ if [ "${OLLAMA_FALLBACK:-}" != "false" ] && [ -z "$RESPONSE_CONTENT" ]; then
                 messages: [{ role: "user", content: $prompt }]
               } end' > "$TMP_FALLBACK_PAYLOAD"
 
-            FALLBACK_RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
+            FALLBACK_RESPONSE=$(curl -s --connect-timeout 5 --max-time 120 -X POST https://api.anthropic.com/v1/messages \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${ANTHROPIC_API_KEY}" \
               -H "anthropic-version: 2023-06-01" \

@@ -6,4 +6,4 @@
 /node_modules
 /graphify-out/cache/
 /.env
-# /tickets — now tracked (auto-generated from research reports)
+tickets
