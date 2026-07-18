@@ -86,7 +86,32 @@ if ! command -v tsx &>/dev/null; then
 fi
 ok "tsx $(tsx --version 2>/dev/null || echo 'ok')"
 
-# ─── 5. Ollama ───────────────────────────────────────────────────────────────
+# ─── 5. codebase-memory-mcp ──────────────────────────────────────────────────
+log "Installing codebase-memory-mcp..."
+npm install -g @deus-data/codebase-memory-mcp 2>/dev/null \
+  || warn "codebase-memory-mcp install failed — graph queries will be unavailable"
+
+MCP_BIN="$(command -v codebase-memory-mcp 2>/dev/null || true)"
+if [[ -n "$MCP_BIN" ]]; then
+  ok "codebase-memory-mcp: $MCP_BIN"
+
+  MCP_JSON="$CLAUDE_DIR/.mcp.json"
+  if [[ -f "$MCP_JSON" ]]; then
+    UPDATED=$(jq --arg bin "$MCP_BIN" \
+      '.mcpServers["codebase-memory-mcp"] = {"command": $bin, "args": [], "transport": "stdio"}' \
+      "$MCP_JSON")
+    echo "$UPDATED" > "$MCP_JSON"
+  else
+    jq -n --arg bin "$MCP_BIN" \
+      '{"mcpServers":{"codebase-memory-mcp":{"command":$bin,"args":[],"transport":"stdio"}}}' \
+      > "$MCP_JSON"
+  fi
+  ok "registered in ~/.claude/.mcp.json"
+else
+  warn "codebase-memory-mcp binary not found after install — check npm global PATH"
+fi
+
+# ─── 6. Ollama ───────────────────────────────────────────────────────────────
 if [[ "$SKIP_OLLAMA" -eq 0 ]]; then
   if ! command -v ollama &>/dev/null; then
     log "Installing Ollama..."
@@ -212,5 +237,7 @@ echo ""
 echo "  Next steps:"
 echo "  1. Edit .env and fill in your API keys"
 echo "  2. Start Ollama: ollama serve"
-echo "  3. Run a task:   bash scripts/run_pipeline.sh \"your task\""
+echo "  3. Index your project (run once in each client repo):"
+echo "     npx codebase-memory-mcp index --project <repo-name> --root ."
+echo "  4. Run a task:   bash scripts/run_pipeline.sh \"your task\""
 echo ""

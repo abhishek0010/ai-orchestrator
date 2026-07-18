@@ -123,19 +123,33 @@ Domains within the same dependency level run concurrently. If a domain fails, it
 
 ## Installation
 
+**Two commands:**
+
 ```bash
 git clone https://github.com/Mybono/ai-orchestrator ~/Projects/ai-orchestrator
-cd ~/Projects/ai-orchestrator
-./scripts/install.sh
+~/Projects/ai-orchestrator/scripts/install.sh
 ```
 
-Or with curl:
+**Or one:**
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/Mybono/ai-orchestrator/main/scripts/install.sh | bash
 ```
 
-`install.sh` creates symlinks from `~/.claude/` into the repo. A `git pull` in the repo directory updates all tooling immediately.
+`install.sh`:
+- installs Node.js, `tsx`, and Ollama
+- installs `codebase-memory-mcp` globally and registers it in `~/.claude/.mcp.json`
+- creates symlinks from `~/.claude/` into the repo
+
+A `git pull` in the repo directory updates all tooling immediately.
+
+**Index each client project once** (run in the root of the target repo):
+
+```bash
+npx codebase-memory-mcp index --project <repo-name> --root .
+```
+
+After indexing, the planner uses the knowledge graph for structural queries instead of grep — ~500 tokens vs ~80K per lookup.
 
 ## Configuration
 
